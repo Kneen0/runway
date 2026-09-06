@@ -1,0 +1,4289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Runway — a weekly outfit competition</title>
+<meta name="description" content="A new brief every week. One shared wardrobe. Five looks each, and the gallery decides." />
+<meta name="theme-color" content="#F1EFEA" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="apple-touch-icon" href="/icon-180.png" />
+<link rel="icon" href="/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Runway" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..600&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --paper:#F1EFEA; --ink:#000; --graphite:#5F5B54; --hair:#CFCAC0; --spot:#1B36C4; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:var(--paper); color:var(--ink);
+    -webkit-text-size-adjust:100%; }
+  body { font-family:'Archivo', Helvetica, Arial, sans-serif; }
+  button, input, textarea, select { font:inherit; color:inherit; border-radius:0; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline:2px solid var(--spot); outline-offset:2px; }
+  input::placeholder, textarea::placeholder { color:#B4AFA5; }
+  .boot { min-height:100vh; display:flex; align-items:center; justify-content:center;
+    font-size:12px; letter-spacing:.3em; color:var(--graphite); }
+
+  /* minimal utility layer (replaces Tailwind, no build step) */
+  .flex{display:flex}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}
+  .items-center{align-items:center}.items-baseline{align-items:baseline}.items-start{align-items:flex-start}
+  .justify-between{justify-content:space-between}.justify-center{justify-content:center}
+  .grid{display:grid}
+  .grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}
+  .grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .order-1{order:1}.order-2{order:2}
+  .hidden{display:none}
+  @media (min-width:640px){
+    .sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  }
+  @media (min-width:768px){
+    .md\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .md\:hidden{display:none}
+    .md\:flex{display:flex}
+  }
+  @media (min-width:1024px){ .lg\:flex-row{flex-direction:row} }
+  @media (min-width:1280px){
+    .xl\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .xl\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  }
+  @keyframes walk { from { transform: translateY(14px) scale(0.97); opacity: 0 } to { transform: none; opacity: 1 } }
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important} }
+</style>
+</head>
+<body>
+<div id="root"><div class="boot">LOADING SEASON ONE</div></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, useId } = React;
+
+/* ============================================================
+   CONFIG — edit these two lines before you deploy
+   ============================================================ */
+
+const HOST_CODE = "atelier";        // the passphrase that unlocks host mode
+const API = "/api/state";            // shared-state endpoint (Netlify function)
+
+/* ============================================================ */
+
+const PAPER = "#F1EFEA";
+const CARD = "#FBFAF7";
+const INK = "#000000";
+const GRAPHITE = "#5F5B54";
+const HAIR = "#CFCAC0";
+const SPOT = "#1B36C4";
+const SILVER = "#8A8F98";
+
+const DISPLAY = "'Bodoni Moda', 'Didot', 'Times New Roman', serif";
+const UI = "'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+const DAY = 86400000;
+const LKEY = "runway:season:v2";
+const PKEY = "runway:me:v2";
+const HKEY = "runway:host:v2";
+
+const SLOTS = [
+  { id: "top", label: "Tops", single: "Top", required: true },
+  { id: "bottom", label: "Bottoms", single: "Bottom", required: true },
+  { id: "outerwear", label: "Outerwear", single: "Outerwear", required: false },
+  { id: "shoes", label: "Shoes", single: "Shoes", required: true },
+  { id: "bag", label: "Bags", single: "Bag", required: false },
+  { id: "accessory", label: "Accessories", single: "Accessory", required: false },
+  { id: "pet", label: "Pets", single: "Pet", required: false },
+];
+
+const ADVANTAGES = {
+  extra_slot: { name: "Sixth look", blurb: "Submit six outfits next round instead of five." },
+  early_access: { name: "First look", blurb: "The wardrobe opens to you 24 hours before anyone else." },
+  rare_unlock: { name: "The archive", blurb: "Six rare pieces only you can style next round." },
+  theme_control: { name: "Set the brief", blurb: "Choose the theme everyone designs to next round." },
+  double_vote: { name: "Double vote", blurb: "Your votes count twice in the next round's gallery." },
+};
+
+const AWARDS = [
+  { id: "main", name: "Best look", short: "Look", votes: 3, blurb: "The round winner" },
+  { id: "styling", name: "Best styling", short: "Styling", votes: 1, blurb: "Cleverest combination" },
+  { id: "caption", name: "Best caption", short: "Caption", votes: 1, blurb: "Made you laugh" },
+  { id: "colour", name: "Boldest colour", short: "Colour", votes: 1, blurb: "Nerve with a palette" },
+  { id: "pet", name: "Best pet", short: "Pet", votes: 1, blurb: "Stole the show", requires: "pet" },
+];
+const AWARD_BY_ID = Object.fromEntries(AWARDS.map((a) => [a.id, a]));
+
+const REACTIONS = ["\u2764\ufe0f", "\ud83d\udd25", "\u2728", "\ud83d\ude02", "\ud83d\udc51"];
+
+const POINTS = [10, 6, 4];
+const POINTS_TAIL = 1;
+const POINTS_AWARD = 2;
+const SEASON_TARGET = 8;
+
+const THEME_POOL = [
+  "Wedding Guest on a Budget",
+  "Airport at 6am",
+  "Head-to-Toe One Colour",
+  "Dress Like Your City",
+  "Second-Hand Only",
+  "Office Party, No Sequins",
+  "Heatwave Formal",
+];
+
+const SHAPES = {
+  tee: {
+    body:
+      "M30,24 L42,18 Q50,26 58,18 L70,24 L80,36 L70,45 L67,40 L67,80 L33,80 L33,40 L30,45 L20,36 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M41,20 Q50,29 59,20" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M33,76 L67,76" fill="none" stroke={ink} strokeWidth="0.8" opacity="0.35" />
+      </>
+    ),
+  },
+  tank: {
+    body:
+      "M36,26 C36,19 40,14 45,15 Q50,27 55,15 C60,14 64,19 64,26 L64,80 L36,80 Z",
+    details: ({ ink }) => (
+      <path d="M36,72 L64,72" fill="none" stroke={ink} strokeWidth="0.8" opacity="0.35" />
+    ),
+  },
+  blouse: {
+    body:
+      "M30,24 L42,18 Q50,25 58,18 L70,24 L80,38 L69,46 L66,41 L70,83 L30,83 L34,41 L31,46 L20,38 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M44,19 L50,32 L56,19" fill="none" stroke={ink} strokeWidth="1.1" />
+        <path d="M50,32 L50,80" fill="none" stroke={ink} strokeWidth="0.8" opacity="0.4" />
+      </>
+    ),
+  },
+  longsleeve: {
+    body:
+      "M32,22 L42,18 Q50,26 58,18 L68,22 L78,34 L82,62 L72,65 L67,44 L67,82 L33,82 L33,44 L28,65 L18,62 L22,34 Z",
+    details: ({ ink }) => (
+      <path d="M41,20 Q50,29 59,20" fill="none" stroke={ink} strokeWidth="1" />
+    ),
+  },
+  turtleneck: {
+    body:
+      "M32,22 L42,18 Q50,26 58,18 L68,22 L78,34 L82,62 L72,65 L67,44 L67,82 L33,82 L33,44 L28,65 L18,62 L22,34 Z",
+    details: ({ ink, color }) => (
+      <>
+        <path
+          d="M42,10 L58,10 L58,21 L42,21 Z"
+          fill={color}
+          stroke={ink}
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+        />
+        <path d="M42,15 L58,15" fill="none" stroke={ink} strokeWidth="0.8" opacity="0.5" />
+      </>
+    ),
+  },
+  oxford: {
+    body:
+      "M32,22 L42,18 Q50,26 58,18 L68,22 L78,34 L82,62 L72,65 L67,44 L67,82 L33,82 L33,44 L28,65 L18,62 L22,34 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M43,19 L50,30 L57,19" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M50,30 L50,82" fill="none" stroke={ink} strokeWidth="0.9" />
+        <circle cx="50" cy="44" r="1.1" fill={ink} />
+        <circle cx="50" cy="58" r="1.1" fill={ink} />
+        <circle cx="50" cy="72" r="1.1" fill={ink} />
+      </>
+    ),
+  },
+  knit: {
+    body:
+      "M32,22 L42,18 Q50,27 58,18 L68,22 L78,34 L82,62 L72,65 L67,44 L67,82 L33,82 L33,44 L28,65 L18,62 L22,34 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M41,20 Q50,30 59,20" fill="none" stroke={ink} strokeWidth="1.2" />
+        <g stroke={ink} strokeWidth="0.7" opacity="0.45">
+          <path d="M39,36 L39,74" fill="none" />
+          <path d="M45,36 L45,74" fill="none" />
+          <path d="M55,36 L55,74" fill="none" />
+          <path d="M61,36 L61,74" fill="none" />
+        </g>
+        <path d="M33,76 L67,76" fill="none" stroke={ink} strokeWidth="1" />
+      </>
+    ),
+  },
+  pants: {
+    body: "M31,18 L69,18 L67,90 L55,90 L50,50 L45,90 L33,90 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M31,27 L69,27" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M50,27 L50,50" fill="none" stroke={ink} strokeWidth="0.8" opacity="0.5" />
+      </>
+    ),
+  },
+  wideleg: {
+    body: "M27,18 L73,18 L75,90 L56,90 L50,52 L44,90 L25,90 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M27,27 L73,27" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M40,30 L37,88" fill="none" stroke={ink} strokeWidth="0.7" opacity="0.5" />
+        <path d="M60,30 L63,88" fill="none" stroke={ink} strokeWidth="0.7" opacity="0.5" />
+      </>
+    ),
+  },
+  cargo: {
+    body: "M30,18 L70,18 L68,90 L55,90 L50,50 L45,90 L32,90 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M30,27 L70,27" fill="none" stroke={ink} strokeWidth="1" />
+        <rect x="33" y="52" width="12" height="14" fill="none" stroke={ink} strokeWidth="1" />
+        <rect x="55" y="52" width="12" height="14" fill="none" stroke={ink} strokeWidth="1" />
+      </>
+    ),
+  },
+  midiSkirt: {
+    body: "M33,20 L67,20 L78,82 L22,82 Z",
+    details: ({ ink }) => (
+      <path d="M33,29 L67,29" fill="none" stroke={ink} strokeWidth="1" />
+    ),
+  },
+  miniSkirt: {
+    body: "M33,24 L67,24 L74,58 L26,58 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M33,32 L67,32" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M50,32 L50,58" fill="none" stroke={ink} strokeWidth="0.8" opacity="0.5" />
+      </>
+    ),
+  },
+  slipSkirt: {
+    body: "M34,20 L66,20 L73,88 L27,88 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M34,26 L66,26" fill="none" stroke={ink} strokeWidth="0.9" />
+        <path d="M38,28 L62,86" fill="none" stroke={ink} strokeWidth="0.7" opacity="0.4" />
+      </>
+    ),
+  },
+  shorts: {
+    body: "M31,20 L69,20 L68,60 L54,60 L50,42 L46,60 L32,60 Z",
+    details: ({ ink }) => (
+      <path d="M31,28 L69,28" fill="none" stroke={ink} strokeWidth="1" />
+    ),
+  },
+  trench: {
+    body:
+      "M30,18 L40,13 L50,22 L60,13 L70,18 L82,28 L78,62 L71,56 L72,90 L28,90 L29,56 L22,62 L18,28 Z",
+    details: ({ ink, accent }) => (
+      <>
+        <path d="M40,13 L50,22 L60,13" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M50,22 L50,90" fill="none" stroke={ink} strokeWidth="0.9" />
+        <path
+          d="M28,52 L72,52 L72,60 L28,60 Z"
+          fill={accent}
+          stroke={ink}
+          strokeWidth="1.2"
+          strokeLinejoin="round"
+        />
+        <circle cx="44" cy="40" r="1.3" fill={ink} />
+        <circle cx="56" cy="40" r="1.3" fill={ink} />
+      </>
+    ),
+  },
+  overcoat: {
+    body:
+      "M30,18 L40,13 L50,22 L60,13 L70,18 L82,28 L78,62 L71,56 L72,90 L28,90 L29,56 L22,62 L18,28 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M40,13 L50,22 L60,13" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M50,22 L50,90" fill="none" stroke={ink} strokeWidth="0.9" />
+        <circle cx="43" cy="42" r="1.3" fill={ink} />
+        <circle cx="57" cy="42" r="1.3" fill={ink} />
+        <circle cx="43" cy="58" r="1.3" fill={ink} />
+        <circle cx="57" cy="58" r="1.3" fill={ink} />
+      </>
+    ),
+  },
+  duster: {
+    body:
+      "M30,16 L40,11 L50,20 L60,11 L70,16 L82,26 L78,60 L71,54 L73,94 L27,94 L29,54 L22,60 L18,26 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M40,11 L50,20 L60,11" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M50,20 L50,94" fill="none" stroke={ink} strokeWidth="0.9" />
+      </>
+    ),
+  },
+  jacket: {
+    body:
+      "M30,18 L40,14 L50,22 L60,14 L70,18 L82,28 L78,54 L71,49 L72,70 L28,70 L29,49 L22,54 L18,28 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M40,14 L50,22 L60,14" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M50,22 L50,70" fill="none" stroke={ink} strokeWidth="0.9" />
+        <path d="M28,64 L72,64" fill="none" stroke={ink} strokeWidth="1" />
+      </>
+    ),
+  },
+  denimJacket: {
+    body:
+      "M30,18 L40,14 L50,22 L60,14 L70,18 L82,28 L78,54 L71,49 L72,70 L28,70 L29,49 L22,54 L18,28 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M40,14 L50,22 L60,14" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M50,22 L50,70" fill="none" stroke={ink} strokeWidth="0.9" />
+        <path d="M28,64 L72,64" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M36,34 L42,34 L42,42 L36,42 Z" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M58,34 L64,34 L64,42 L58,42 Z" fill="none" stroke={ink} strokeWidth="1" />
+      </>
+    ),
+  },
+  moto: {
+    body:
+      "M30,18 L40,14 L50,22 L60,14 L70,18 L82,28 L78,54 L71,49 L72,70 L28,70 L29,49 L22,54 L18,28 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M40,14 L50,22 L60,14" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M46,24 L58,68" fill="none" stroke={ink} strokeWidth="1.4" />
+        <path d="M32,44 L40,50" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M28,63 L72,63" fill="none" stroke={ink} strokeWidth="1" />
+      </>
+    ),
+  },
+  blazer: {
+    body:
+      "M30,18 L40,14 L50,24 L60,14 L70,18 L82,28 L78,56 L71,51 L72,78 L28,78 L29,51 L22,56 L18,28 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M40,14 L50,24 L44,40 Z" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M60,14 L50,24 L56,40 Z" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M44,40 L46,78" fill="none" stroke={ink} strokeWidth="0.9" />
+        <path d="M56,40 L54,78" fill="none" stroke={ink} strokeWidth="0.9" />
+        <circle cx="50" cy="52" r="1.4" fill={ink} />
+      </>
+    ),
+  },
+  puffer: {
+    body:
+      "M28,20 L40,14 L50,22 L60,14 L72,20 L84,30 L80,56 L72,50 L73,74 L27,74 L28,50 L20,56 L16,30 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M50,22 L50,74" fill="none" stroke={ink} strokeWidth="0.9" />
+        <g stroke={ink} strokeWidth="0.9" fill="none" opacity="0.8">
+          <path d="M28,34 L72,34" />
+          <path d="M27,46 L73,46" />
+          <path d="M27,58 L73,58" />
+        </g>
+      </>
+    ),
+  },
+  sneaker: {
+    body:
+      "M12,70 L12,56 Q14,45 26,43 L40,43 L54,52 L80,58 Q88,60 88,68 L88,74 L12,74 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M12,67 L88,67" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M26,48 L38,54" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M22,54 L34,60" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M46,50 Q62,58 78,58" fill="none" stroke={ink} strokeWidth="1.1" />
+      </>
+    ),
+  },
+  chelsea: {
+    body: "M30,16 L58,16 L58,60 L80,66 Q88,68 88,76 L88,82 L28,82 L26,60 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M28,76 L88,76" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M30,22 L58,22" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M50,26 L50,58" fill="none" stroke={ink} strokeWidth="0.9" opacity="0.6" />
+      </>
+    ),
+  },
+  rainboot: {
+    body: "M30,8 L60,8 L60,58 L82,64 Q90,66 90,76 L90,84 L28,84 L26,58 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M28,78 L90,78" fill="none" stroke={ink} strokeWidth="1.3" />
+        <path d="M29,18 L60,18" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M56,20 L56,30" fill="none" stroke={ink} strokeWidth="1" />
+      </>
+    ),
+  },
+  heel: {
+    body:
+      "M26,42 C46,40 70,50 86,62 Q89,66 84,69 L48,70 C40,70 34,66 32,58 L39,86 L29,86 L23,58 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M40,46 Q46,58 58,54" fill="none" stroke={ink} strokeWidth="1.1" />
+        <path d="M29,86 L39,86" fill="none" stroke={ink} strokeWidth="2" />
+      </>
+    ),
+  },
+  flat: {
+    body:
+      "M14,72 Q12,58 28,56 L58,56 Q82,58 86,70 Q88,77 80,77 L22,77 Q15,78 14,72 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M14,72 L86,72" fill="none" stroke={ink} strokeWidth="1" opacity="0.6" />
+        <path d="M30,60 Q40,66 52,62" fill="none" stroke={ink} strokeWidth="1.1" />
+      </>
+    ),
+  },
+  sandal: {
+    body:
+      "M16,72 Q14,64 26,62 L74,62 Q86,64 84,72 Q82,79 74,79 L26,79 Q17,79 16,72 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M28,62 Q40,48 54,60" fill="none" stroke={ink} strokeWidth="1.6" />
+        <path d="M50,62 Q62,50 74,62" fill="none" stroke={ink} strokeWidth="1.6" />
+        <path d="M16,72 L84,72" fill="none" stroke={ink} strokeWidth="1" opacity="0.5" />
+      </>
+    ),
+  },
+  tote: {
+    body: "M24,36 L76,36 L82,88 L18,88 Z",
+    details: ({ ink }) => (
+      <>
+        <path
+          d="M36,36 C36,20 44,15 50,15 C56,15 64,20 64,36"
+          fill="none"
+          stroke={ink}
+          strokeWidth="2"
+        />
+        <path d="M20,46 L80,46" fill="none" stroke={ink} strokeWidth="0.9" opacity="0.4" />
+      </>
+    ),
+  },
+  crossbody: {
+    body: "M28,48 L72,48 L70,80 L30,80 Z M28,48 L50,34 L72,48 L72,54 L28,54 Z",
+    details: ({ ink }) => (
+      <>
+        <path
+          d="M32,50 C26,20 74,20 68,50"
+          fill="none"
+          stroke={ink}
+          strokeWidth="1.8"
+        />
+        <circle cx="50" cy="58" r="2" fill={ink} />
+      </>
+    ),
+  },
+  clutch: {
+    body: "M18,54 L82,54 L82,79 L18,79 Z M18,54 L50,39 L82,54 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M18,54 L82,54" fill="none" stroke={ink} strokeWidth="1.1" />
+        <circle cx="50" cy="57" r="2.2" fill="none" stroke={ink} strokeWidth="1.3" />
+      </>
+    ),
+  },
+  shoulderBag: {
+    body: "M32,50 Q32,42 50,42 Q68,42 68,50 L71,76 L29,76 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M38,44 C38,30 62,30 62,44" fill="none" stroke={ink} strokeWidth="1.8" />
+        <path d="M29,62 L71,62" fill="none" stroke={ink} strokeWidth="0.9" opacity="0.5" />
+      </>
+    ),
+  },
+  hat: {
+    body: "M26,60 Q26,37 50,37 Q74,37 74,60 Z M12,60 Q50,77 88,60 Q50,53 12,60 Z",
+    details: ({ ink }) => (
+      <path d="M26,56 L74,56" fill="none" stroke={ink} strokeWidth="1.1" />
+    ),
+  },
+  scarf: {
+    body:
+      "M18,34 C32,27 40,46 50,43 C62,40 66,26 82,32 L84,48 C68,42 62,60 50,60 C38,60 32,44 20,50 Z",
+    details: ({ ink }) => (
+      <g stroke={ink} strokeWidth="1" fill="none">
+        <path d="M20,50 L18,60" />
+        <path d="M26,52 L25,62" />
+        <path d="M32,55 L31,65" />
+        <path d="M84,48 L86,58" />
+      </g>
+    ),
+  },
+  hoops: {
+    body: null,
+    details: ({ ink, color }) => (
+      <>
+        <circle cx="32" cy="56" r="15" fill="none" stroke={color} strokeWidth="5" />
+        <circle cx="32" cy="56" r="15" fill="none" stroke={ink} strokeWidth="1" opacity="0.5" />
+        <circle cx="68" cy="56" r="15" fill="none" stroke={color} strokeWidth="5" />
+        <circle cx="68" cy="56" r="15" fill="none" stroke={ink} strokeWidth="1" opacity="0.5" />
+        <path d="M32,36 L32,41" stroke={ink} strokeWidth="1.4" />
+        <path d="M68,36 L68,41" stroke={ink} strokeWidth="1.4" />
+      </>
+    ),
+  },
+  belt: {
+    body: "M10,44 L90,44 L90,58 L10,58 Z",
+    details: ({ ink }) => (
+      <>
+        <rect x="40" y="39" width="20" height="24" fill="none" stroke={ink} strokeWidth="1.6" />
+        <path d="M50,39 L50,63" fill="none" stroke={ink} strokeWidth="1.2" />
+        <circle cx="24" cy="51" r="1.3" fill={ink} />
+        <circle cx="32" cy="51" r="1.3" fill={ink} />
+      </>
+    ),
+  },
+  sunglasses: {
+    body:
+      "M14,44 Q14,36 26,36 L44,36 Q49,36 48,45 Q46,59 33,59 Q16,59 14,44 Z M52,45 Q51,36 56,36 L74,36 Q86,36 86,44 Q84,59 67,59 Q54,59 52,45 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M48,41 L52,41" fill="none" stroke={ink} strokeWidth="1.6" />
+        <path d="M14,42 L6,38" fill="none" stroke={ink} strokeWidth="1.6" />
+        <path d="M86,42 L94,38" fill="none" stroke={ink} strokeWidth="1.6" />
+      </>
+    ),
+  },
+  gloves: {
+    body:
+      "M36,88 L36,46 C36,38 42,34 45,39 L45,26 C45,19 53,19 53,26 L53,39 C57,34 63,37 63,45 L63,88 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M36,80 L63,80" fill="none" stroke={ink} strokeWidth="1" opacity="0.5" />
+        <path d="M45,42 L45,52" fill="none" stroke={ink} strokeWidth="0.9" opacity="0.6" />
+        <path d="M53,42 L53,52" fill="none" stroke={ink} strokeWidth="0.9" opacity="0.6" />
+      </>
+    ),
+  },
+};
+
+function PatternOverlay({ kind, accent, ink }) {
+  if (!kind) return null;
+  if (kind === "stripe")
+    return (
+      <g stroke={accent} strokeWidth="4">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <line key={i} x1="0" y1={i * 9 + 4} x2="100" y2={i * 9 + 4} />
+        ))}
+      </g>
+    );
+  if (kind === "check")
+    return (
+      <g stroke={accent} strokeWidth="2.2" opacity="0.85">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <line key={"h" + i} x1="0" y1={i * 15 + 8} x2="100" y2={i * 15 + 8} />
+        ))}
+        {Array.from({ length: 7 }).map((_, i) => (
+          <line key={"v" + i} x1={i * 15 + 8} y1="0" x2={i * 15 + 8} y2="100" />
+        ))}
+      </g>
+    );
+  if (kind === "pleat")
+    return (
+      <g stroke={ink} strokeWidth="0.8" opacity="0.45">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <line key={i} x1={i * 11 + 12} y1="0" x2={i * 11 + 8} y2="100" />
+        ))}
+      </g>
+    );
+  if (kind === "dot")
+    return (
+      <g fill={accent}>
+        {Array.from({ length: 40 }).map((_, i) => (
+          <circle key={i} cx={(i % 8) * 13 + 6} cy={Math.floor(i / 8) * 13 + 24} r="2" />
+        ))}
+      </g>
+    );
+  if (kind === "sequin")
+    return (
+      <g fill={accent} opacity="0.9">
+        {Array.from({ length: 60 }).map((_, i) => {
+          const row = Math.floor(i / 10);
+          return (
+            <circle
+              key={i}
+              cx={(i % 10) * 10 + (row % 2 ? 8 : 3)}
+              cy={row * 10 + 14}
+              r="2.6"
+            />
+          );
+        })}
+      </g>
+    );
+  if (kind === "graphic")
+    return (
+      <g>
+        <circle cx="50" cy="46" r="11" fill="none" stroke={accent} strokeWidth="3" />
+        <rect x="34" y="58" width="32" height="4" fill={accent} />
+      </g>
+    );
+  return null;
+}
+
+function Art({ item, className, style }) {
+  const uid = useId().replace(/:/g, "");
+  if (!item) return null;
+  const shape = SHAPES[item.shape];
+  if (!shape) return null;
+  const accent = item.accent || GRAPHITE;
+  const ctx = { ink: INK, accent, color: item.color };
+  return (
+    <svg viewBox="0 0 100 100" className={className} style={style} aria-hidden="true">
+      {shape.body && (
+        <>
+          <defs>
+            <clipPath id={"c" + uid}>
+              <path d={shape.body} />
+            </clipPath>
+          </defs>
+          <path
+            d={shape.body}
+            fill={item.color}
+            stroke={INK}
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+          />
+          {item.pattern && (
+            <g clipPath={`url(#c${uid})`}>
+              <PatternOverlay kind={item.pattern} accent={accent} ink={INK} />
+            </g>
+          )}
+          <path
+            d={shape.body}
+            fill="none"
+            stroke={INK}
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+          />
+        </>
+      )}
+      {shape.details && shape.details(ctx)}
+    </svg>
+  );
+}
+
+/* ============================================================
+   WARDROBE — 40 staples + 6 archive pieces
+   ============================================================ */
+
+const WARDROBE = [
+  // TOPS
+  { id: "t-tee", name: "Boxy cotton tee", slot: "top", shape: "tee", color: "#F4F2EC", note: "Heavyweight jersey" },
+  { id: "t-breton", name: "Breton stripe top", slot: "top", shape: "longsleeve", color: "#EFEDE6", accent: "#1B2C4A", pattern: "stripe", note: "Cotton" },
+  { id: "t-shell", name: "Silk shell blouse", slot: "top", shape: "blouse", color: "#E7D9C8", note: "Sandwashed silk" },
+  { id: "t-turtle", name: "Black turtleneck", slot: "top", shape: "turtleneck", color: "#17171A", note: "Merino" },
+  { id: "t-oxford", name: "Oversized oxford", slot: "top", shape: "oxford", color: "#DCE4EE", note: "Borrowed fit" },
+  { id: "t-knit", name: "Fisherman knit", slot: "top", shape: "knit", color: "#DED4BE", note: "Aran wool" },
+  { id: "t-tank", name: "Ribbed tank", slot: "top", shape: "tank", color: "#FAF8F3", note: "Cotton rib" },
+  { id: "t-band", name: "Faded band tee", slot: "top", shape: "tee", color: "#3A3733", accent: "#C9422C", pattern: "graphic", note: "Thrifted" },
+
+  // BOTTOMS
+  { id: "b-jeans", name: "Straight-leg jeans", slot: "bottom", shape: "pants", color: "#5C7AA6", note: "Rigid denim" },
+  { id: "b-wide", name: "Wide-leg trouser", slot: "bottom", shape: "wideleg", color: "#2E2C29", note: "Wool suiting" },
+  { id: "b-pleat", name: "Pleated midi skirt", slot: "bottom", shape: "midiSkirt", color: "#7C8B6F", pattern: "pleat", note: "Sunray pleat" },
+  { id: "b-cargo", name: "Utility cargo pant", slot: "bottom", shape: "cargo", color: "#7D7A62", note: "Ripstop" },
+  { id: "b-mini", name: "Leather mini", slot: "bottom", shape: "miniSkirt", color: "#231F1E", note: "Lambskin" },
+  { id: "b-linen", name: "Linen shorts", slot: "bottom", shape: "shorts", color: "#E4DAC6", note: "Washed linen" },
+  { id: "b-short", name: "Tailored short", slot: "bottom", shape: "shorts", color: "#4A4E58", note: "Wool blend" },
+  { id: "b-slip", name: "Bias slip skirt", slot: "bottom", shape: "slipSkirt", color: "#9AA3B0", note: "Satin" },
+
+  // OUTERWEAR
+  { id: "o-trench", name: "Classic trench", slot: "outerwear", shape: "trench", color: "#CDB894", accent: "#B7A181", note: "Cotton gabardine" },
+  { id: "o-denim", name: "Denim jacket", slot: "outerwear", shape: "denimJacket", color: "#7E9AC0", note: "Stonewashed" },
+  { id: "o-coat", name: "Wool overcoat", slot: "outerwear", shape: "overcoat", color: "#4C4A47", note: "Double-faced" },
+  { id: "o-moto", name: "Cropped moto", slot: "outerwear", shape: "moto", color: "#1C1A19", note: "Leather" },
+  { id: "o-blazer", name: "Boyfriend blazer", slot: "outerwear", shape: "blazer", color: "#565C4E", note: "Unstructured" },
+  { id: "o-puffer", name: "Cropped puffer", slot: "outerwear", shape: "puffer", color: "#B8443C", note: "Down fill" },
+  { id: "o-wind", name: "Nylon anorak", slot: "outerwear", shape: "jacket", color: "#3C6E63", note: "Water repellent" },
+
+  // SHOES
+  { id: "s-sneaker", name: "White leather sneaker", slot: "shoes", shape: "sneaker", color: "#F5F3EE", note: "Court style" },
+  { id: "s-chelsea", name: "Chelsea boot", slot: "shoes", shape: "chelsea", color: "#2A2422", note: "Polished calf" },
+  { id: "s-heel", name: "Strappy heel", slot: "shoes", shape: "heel", color: "#8E2C3E", note: "85mm" },
+  { id: "s-loafer", name: "Penny loafer", slot: "shoes", shape: "flat", color: "#6B4A2F", note: "Leather sole" },
+  { id: "s-rain", name: "Rubber rain boot", slot: "shoes", shape: "rainboot", color: "#2F4B7C", note: "Fully waterproof" },
+  { id: "s-ballet", name: "Ballet flat", slot: "shoes", shape: "flat", color: "#E9D9D3", note: "Softest nappa" },
+  { id: "s-sandal", name: "Platform sandal", slot: "shoes", shape: "sandal", color: "#C6A87C", note: "Cork base" },
+
+  // BAGS
+  { id: "g-tote", name: "Leather tote", slot: "bag", shape: "tote", color: "#8A6849", note: "Carries everything" },
+  { id: "g-cross", name: "Nylon crossbody", slot: "bag", shape: "crossbody", color: "#33383F", note: "Hands free" },
+  { id: "g-clutch", name: "Beaded clutch", slot: "bag", shape: "clutch", color: "#20242E", accent: "#C3B27A", pattern: "dot", note: "Evening" },
+  { id: "g-market", name: "Canvas market bag", slot: "bag", shape: "tote", color: "#E2DCCB", accent: "#8C4A3A", pattern: "stripe", note: "Farmers market" },
+  { id: "g-shoulder", name: "Mini shoulder bag", slot: "bag", shape: "shoulderBag", color: "#A8384A", note: "Fits a phone" },
+
+  // ACCESSORIES
+  { id: "a-scarf", name: "Printed silk scarf", slot: "accessory", shape: "scarf", color: "#D9C46A", accent: "#8C3A2E", pattern: "dot", note: "90cm square" },
+  { id: "a-hat", name: "Bucket hat", slot: "accessory", shape: "hat", color: "#6E7D5B", note: "Cotton twill" },
+  { id: "a-hoops", name: "Gold hoops", slot: "accessory", shape: "hoops", color: "#C0982F", note: "Chunky" },
+  { id: "a-belt", name: "Wide leather belt", slot: "accessory", shape: "belt", color: "#3B2A22", note: "Cinches anything" },
+  { id: "a-shades", name: "Tinted sunglasses", slot: "accessory", shape: "sunglasses", color: "#9C6E52", note: "Amber lens" },
+
+  // THE ARCHIVE — advantage only
+  { id: "r-sequin", name: "Sequin shell", slot: "top", shape: "tank", color: "#2B2A33", accent: "#D4B24A", pattern: "sequin", rare: true, note: "Archive" },
+  { id: "r-satin", name: "Liquid satin column", slot: "bottom", shape: "slipSkirt", color: "#232436", rare: true, note: "Archive" },
+  { id: "r-duster", name: "Hand-painted duster", slot: "outerwear", shape: "duster", color: "#E6D6DE", accent: "#6E4B6B", pattern: "dot", rare: true, note: "Archive" },
+  { id: "r-chrome", name: "Chrome kitten heel", slot: "shoes", shape: "heel", color: "#C5CAD2", rare: true, note: "Archive" },
+  { id: "r-mesh", name: "Crystal mesh pouch", slot: "bag", shape: "clutch", color: "#D7DAE0", accent: "#9AA0AC", pattern: "check", rare: true, note: "Archive" },
+  { id: "r-gloves", name: "Opera gloves", slot: "accessory", shape: "gloves", color: "#6E1229", rare: true, note: "Archive" },
+];
+
+/* ---- new flat shapes for the wardrobe grid ---- */
+Object.assign(SHAPES, {
+  babydoll: {
+    body: "M30,24 L42,18 Q50,26 58,18 L70,24 L80,36 L70,45 L66,40 L74,84 L26,84 L34,40 L30,45 L20,36 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M41,20 Q50,29 59,20" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M34,44 Q50,50 66,44" fill="none" stroke={ink} strokeWidth="1.2" />
+      </>
+    ),
+  },
+  phone: {
+    body: "M36,18 L64,18 Q68,18 68,24 L68,80 Q68,86 64,86 L36,86 Q32,86 32,80 L32,24 Q32,18 36,18 Z",
+    details: ({ ink, accent }) => (
+      <>
+        <path d="M44,24 L56,24" fill="none" stroke={ink} strokeWidth="1.4" />
+        <rect x="38" y="32" width="24" height="34" fill="none" stroke={ink} strokeWidth="1" opacity="0.5" />
+        <circle cx="50" cy="76" r="3" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M32,34 C18,42 18,62 30,70" fill="none" stroke={accent} strokeWidth="2.6" />
+      </>
+    ),
+  },
+  clip: {
+    body: "M22,54 L74,42 Q80,41 81,47 Q82,53 76,54 L26,66 Q20,67 19,61 Q18,55 22,54 Z",
+    details: ({ ink, color }) => (
+      <>
+        <circle cx="34" cy="56" r="4.5" fill={color} stroke={ink} strokeWidth="1.2" />
+        <circle cx="48" cy="53" r="4.5" fill={color} stroke={ink} strokeWidth="1.2" />
+        <circle cx="62" cy="50" r="4.5" fill={color} stroke={ink} strokeWidth="1.2" />
+      </>
+    ),
+  },
+  watch: {
+    body: "M40,20 L60,20 L58,40 L42,40 Z M42,60 L58,60 L60,80 L40,80 Z",
+    details: ({ ink, color }) => (
+      <>
+        <circle cx="50" cy="50" r="16" fill={color} stroke={ink} strokeWidth="1.6" />
+        <circle cx="50" cy="50" r="10" fill="none" stroke={ink} strokeWidth="1" opacity="0.5" />
+        <path d="M50,50 L50,42" fill="none" stroke={ink} strokeWidth="1.4" />
+        <path d="M50,50 L57,53" fill="none" stroke={ink} strokeWidth="1.4" />
+      </>
+    ),
+  },
+  headband: {
+    body: null,
+    details: ({ ink, color }) => (
+      <>
+        <path d="M18,68 C18,28 82,28 82,68" fill="none" stroke={color} strokeWidth="9" strokeLinecap="round" />
+        <path d="M18,68 C18,28 82,28 82,68" fill="none" stroke={ink} strokeWidth="1.1" opacity="0.5" />
+      </>
+    ),
+  },
+  cat: {
+    body: "M34,58 Q34,42 50,42 Q66,42 66,58 L68,80 L32,80 Z M38,44 L36,30 L48,38 Z M62,44 L64,30 L52,38 Z",
+    details: ({ ink }) => (
+      <>
+        <circle cx="43" cy="56" r="1.8" fill={ink} />
+        <circle cx="57" cy="56" r="1.8" fill={ink} />
+        <path d="M50,62 L50,65 M50,65 Q46,68 43,65 M50,65 Q54,68 57,65" fill="none" stroke={ink} strokeWidth="1" />
+        <path d="M68,74 C82,72 84,56 76,50" fill="none" stroke={ink} strokeWidth="3" strokeLinecap="round" />
+      </>
+    ),
+  },
+  dog: {
+    body: "M34,56 Q34,40 50,40 Q66,40 66,56 L68,80 L32,80 Z M34,44 Q24,46 26,60 Q32,62 36,54 Z M66,44 Q76,46 74,60 Q68,62 64,54 Z",
+    details: ({ ink }) => (
+      <>
+        <circle cx="44" cy="54" r="1.8" fill={ink} />
+        <circle cx="56" cy="54" r="1.8" fill={ink} />
+        <ellipse cx="50" cy="63" rx="3.4" ry="2.6" fill={ink} />
+        <path d="M68,72 C78,66 78,56 72,52" fill="none" stroke={ink} strokeWidth="3" strokeLinecap="round" />
+      </>
+    ),
+  },
+  bunny: {
+    body: "M36,60 Q36,46 50,46 Q64,46 64,60 L66,82 L34,82 Z M42,48 C38,30 40,16 45,16 C50,16 49,32 47,48 Z M58,48 C62,30 60,16 55,16 C50,16 51,32 53,48 Z",
+    details: ({ ink }) => (
+      <>
+        <circle cx="44" cy="58" r="1.7" fill={ink} />
+        <circle cx="56" cy="58" r="1.7" fill={ink} />
+        <path d="M50,64 L50,67" fill="none" stroke={ink} strokeWidth="1.1" />
+        <circle cx="68" cy="76" r="5" fill="none" stroke={ink} strokeWidth="1.4" />
+      </>
+    ),
+  },
+  bird: {
+    body: "M38,54 Q38,40 52,40 Q66,40 68,54 Q70,70 56,76 L42,76 Q34,68 38,54 Z",
+    details: ({ ink, accent }) => (
+      <>
+        <circle cx="58" cy="50" r="1.9" fill={ink} />
+        <path d="M68,54 L78,58 L68,60 Z" fill={accent} stroke={ink} strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M40,58 Q50,52 60,60 Q50,68 42,66" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M46,76 L44,84 M56,76 L58,84" fill="none" stroke={ink} strokeWidth="1.4" />
+      </>
+    ),
+  },
+});
+
+/* ---- new fits, accessories and pets ---- */
+const EXTRA_ITEMS = [
+  { id: "t-babydoll", name: "Baby doll top", slot: "top", shape: "babydoll", color: "#F0D7E2", note: "Empire waist" },
+  { id: "t-crop", name: "Cropped cami", slot: "top", shape: "tank", color: "#9BB8A6", note: "Silk charmeuse" },
+  { id: "b-flare", name: "Flared jeans", slot: "bottom", shape: "wideleg", color: "#4A6C99", note: "70s cut" },
+  { id: "b-cargoskirt", name: "Cargo mini", slot: "bottom", shape: "miniSkirt", color: "#6F7358", note: "Four pockets" },
+  { id: "o-shearling", name: "Faux shearling", slot: "outerwear", shape: "jacket", color: "#D8C7A8", accent: "#B49B72", note: "Borg lined" },
+  { id: "s-mary", name: "Mary janes", slot: "shoes", shape: "flat", color: "#1E1B1A", accent: "#C0982F", note: "Strap and buckle" },
+  { id: "s-cowboy", name: "Cowboy boot", slot: "shoes", shape: "chelsea", color: "#9B6B3F", note: "Stitched shaft" },
+  { id: "g-baguette", name: "Baguette bag", slot: "bag", shape: "shoulderBag", color: "#C8A2C8", note: "Under the arm" },
+  { id: "a-phone", name: "Phone on a strap", slot: "accessory", shape: "phone", color: "#E8E6E1", accent: "#B23A48", note: "Always filming" },
+  { id: "a-clip", name: "Pearl hair clips", slot: "accessory", shape: "clip", color: "#F2EDE4", note: "Set of three" },
+  { id: "a-watch", name: "Chunky watch", slot: "accessory", shape: "watch", color: "#C0982F", note: "Gold face" },
+  { id: "a-headband", name: "Padded headband", slot: "accessory", shape: "headband", color: "#8E2C3E", note: "Velvet" },
+
+  { id: "p-cat", name: "Cat", slot: "pet", shape: "cat", color: "#8C8177", note: "Unimpressed" },
+  { id: "p-dog", name: "Dog", slot: "pet", shape: "dog", color: "#C9A06B", note: "Very impressed" },
+  { id: "p-bunny", name: "Bunny", slot: "pet", shape: "bunny", color: "#EDE6DA", note: "Lop eared" },
+  { id: "p-bird", name: "Bird", slot: "pet", shape: "bird", color: "#5FA8B8", accent: "#D9A02B", note: "Rides on your bag" },
+
+  { id: "r-feather", name: "Feather coat", slot: "outerwear", shape: "duster", color: "#2C2A3A", accent: "#8E86B8", pattern: "dot", rare: true, note: "Archive" },
+  { id: "r-tiara", name: "Crystal tiara", slot: "accessory", shape: "headband", color: "#CFE0EA", rare: true, note: "Archive" },
+];
+EXTRA_ITEMS.forEach((i) => WARDROBE.push(i));
+
+/* pieces that arrive part way through the season */
+const DROPS = {
+  "p-cat": 2, "p-dog": 2, "p-bunny": 2, "p-bird": 2,
+  "t-babydoll": 3, "a-phone": 3, "s-mary": 3,
+  "b-flare": 4, "o-shearling": 4, "g-baguette": 4, "a-clip": 4,
+  "t-crop": 5, "b-cargoskirt": 5, "s-cowboy": 5, "a-watch": 5, "a-headband": 5,
+};
+WARDROBE.forEach((i) => { if (DROPS[i.id]) i.dropRound = DROPS[i.id]; });
+
+const BY_ID = Object.fromEntries(WARDROBE.map((i) => [i.id, i]));
+
+/* ============================================================
+   THE MODEL
+   ============================================================ */
+
+const SKINS = [
+  { id: "s1", name: "Porcelain", color: "#F4DCC8" },
+  { id: "s2", name: "Sand", color: "#EBC29C" },
+  { id: "s3", name: "Honey", color: "#D19A6A" },
+  { id: "s4", name: "Amber", color: "#B0743F" },
+  { id: "s5", name: "Chestnut", color: "#8A5330" },
+  { id: "s6", name: "Espresso", color: "#5A361F" },
+];
+
+const HAIR_STYLES = [
+  { id: "long", name: "Long" },
+  { id: "bob", name: "Bob" },
+  { id: "curls", name: "Curls" },
+  { id: "pony", name: "Ponytail" },
+  { id: "buns", name: "Space buns" },
+  { id: "crop", name: "Crop" },
+  { id: "braids", name: "Braids" },
+  { id: "scarf", name: "Headscarf" },
+];
+
+const HAIR_COLORS = [
+  "#191310", "#4A2C18", "#8A5A2B", "#C69433", "#E4DACB",
+  "#B23A48", "#8E5FA8", "#3E7FA8", "#D96A9A", "#4C7A5A",
+];
+
+const MAKEUPS = [
+  { id: "bare", name: "Bare" },
+  { id: "natural", name: "Natural" },
+  { id: "bold", name: "Bold lip" },
+  { id: "liner", name: "Graphic liner" },
+  { id: "glitter", name: "Glitter" },
+];
+
+const HEIGHTS = [
+  { id: "petite", name: "Petite", scale: 0.93 },
+  { id: "average", name: "Average", scale: 1 },
+  { id: "tall", name: "Tall", scale: 1.07 },
+];
+
+const POSES = [
+  { id: "front", name: "Straight on", t: "" },
+  { id: "hip", name: "Hip out", t: "rotate(-3 60 240) skewX(2)" },
+  { id: "lean", name: "Lean", t: "rotate(4 60 240)" },
+  { id: "turn", name: "Three quarter", t: "translate(60 0) scale(0.9 1) translate(-60 0)" },
+  { id: "sway", name: "Sway", t: "rotate(-6 60 250)" },
+  { id: "step", name: "Mid step", t: "translate(60 0) scale(0.96 1) translate(-60 0) rotate(3 60 250)" },
+];
+
+const RECOLOURS = [
+  "#F4F2EC", "#17171A", "#8E2C3E", "#B8443C", "#C08A2E", "#D9C46A",
+  "#3C6E63", "#7C8B6F", "#2F4B7C", "#5C7AA6", "#C8A2C8", "#F0D7E2",
+  "#8A6849", "#4C4A47", "#E4DAC6", "#9AA3B0",
+];
+
+const DEFAULT_MODEL = {
+  skin: "s2",
+  hair: "long",
+  hairColor: "#4A2C18",
+  makeup: "natural",
+  height: "average",
+  pose: "front",
+  glasses: false,
+  freckles: false,
+};
+
+const skinOf = (m) => (SKINS.find((s) => s.id === (m && m.skin)) || SKINS[1]).color;
+const heightOf = (m) => (HEIGHTS.find((h) => h.id === (m && m.height)) || HEIGHTS[1]).scale;
+const poseOf = (m) => (POSES.find((p) => p.id === (m && m.pose)) || POSES[0]).t;
+
+/* ---- pattern fill inside the figure's coordinate space ---- */
+function FigPattern({ kind, accent }) {
+  if (!kind) return null;
+  if (kind === "stripe")
+    return (
+      <g stroke={accent} strokeWidth="5">
+        {Array.from({ length: 26 }).map((_, i) => (
+          <line key={i} x1="0" y1={i * 10 + 4} x2="120" y2={i * 10 + 4} />
+        ))}
+      </g>
+    );
+  if (kind === "check")
+    return (
+      <g stroke={accent} strokeWidth="2.4" opacity="0.85">
+        {Array.from({ length: 18 }).map((_, i) => (
+          <line key={"h" + i} x1="0" y1={i * 15 + 6} x2="120" y2={i * 15 + 6} />
+        ))}
+        {Array.from({ length: 9 }).map((_, i) => (
+          <line key={"v" + i} x1={i * 15 + 6} y1="0" x2={i * 15 + 6} y2="260" />
+        ))}
+      </g>
+    );
+  if (kind === "pleat")
+    return (
+      <g stroke={INK} strokeWidth="0.9" opacity="0.4">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <line key={i} x1={i * 10 + 6} y1="90" x2={i * 10 + 2} y2="260" />
+        ))}
+      </g>
+    );
+  if (kind === "dot")
+    return (
+      <g fill={accent}>
+        {Array.from({ length: 130 }).map((_, i) => (
+          <circle key={i} cx={(i % 10) * 13 + 5} cy={Math.floor(i / 10) * 20 + 8} r="2.3" />
+        ))}
+      </g>
+    );
+  if (kind === "sequin")
+    return (
+      <g fill={accent} opacity="0.9">
+        {Array.from({ length: 208 }).map((_, i) => {
+          const row = Math.floor(i / 13);
+          return <circle key={i} cx={(i % 13) * 9.5 + (row % 2 ? 8 : 3)} cy={row * 9 + 6} r="2.4" />;
+        })}
+      </g>
+    );
+  if (kind === "graphic")
+    return (
+      <g>
+        <circle cx="60" cy="80" r="11" fill="none" stroke={accent} strokeWidth="3" />
+        <rect x="45" y="94" width="30" height="4" fill={accent} />
+      </g>
+    );
+  return null;
+}
+
+/* ---- a single worn piece: fill, optional pattern, outline ---- */
+function Piece({ d, color, pattern, accent, sw }) {
+  const id = "p" + useId().replace(/:/g, "");
+  const w = sw || 1.7;
+  if (!pattern)
+    return <path d={d} fill={color} stroke={INK} strokeWidth={w} strokeLinejoin="round" />;
+  return (
+    <g>
+      <defs>
+        <clipPath id={id}>
+          <path d={d} />
+        </clipPath>
+      </defs>
+      <path d={d} fill={color} stroke="none" />
+      <g clipPath={"url(#" + id + ")"}>
+        <FigPattern kind={pattern} accent={accent || GRAPHITE} />
+      </g>
+      <path d={d} fill="none" stroke={INK} strokeWidth={w} strokeLinejoin="round" />
+    </g>
+  );
+}
+
+const line = (d, w, o) => (
+  <path d={d} fill="none" stroke={INK} strokeWidth={w || 1.1} opacity={o || 1} strokeLinecap="round" />
+);
+
+/* ---- worn garments, drawn to fit the figure ---- */
+
+const SLEEVE_L = "M43,58 L34,64 C30,88 28,112 28,134 L40,136 C40,110 41,84 46,66 Z";
+const SLEEVE_R = "M77,58 L86,64 C90,88 92,112 92,134 L80,136 C80,110 79,84 74,66 Z";
+
+const topShort = (p) => (
+  <g>
+    <Piece {...p} d="M42,58 Q60,50 78,58 L87,68 L83,81 L77,77 L78,112 L42,112 L43,77 L37,81 L33,68 Z" />
+    {line("M48,55 Q60,64 72,55", 1.1, 0.7)}
+  </g>
+);
+const topTank = (p) => (
+  <g>
+    <Piece {...p} d="M48,54 Q60,49 72,54 L76,112 L44,112 Z" />
+    {line("M50,54 Q60,62 70,54", 1.1, 0.7)}
+  </g>
+);
+const topBaby = (p) => (
+  <g>
+    <Piece {...p} d="M42,58 Q60,50 78,58 L86,68 L82,80 L77,76 L86,132 L34,132 L43,76 L38,80 L34,68 Z" />
+    {line("M38,80 Q60,88 82,80", 1.3)}
+  </g>
+);
+const topLong = (extra) => (p) => (
+  <g>
+    <Piece {...p} d={SLEEVE_L} />
+    <Piece {...p} d={SLEEVE_R} />
+    <Piece {...p} d="M42,58 Q60,50 78,58 L79,112 L41,112 Z" />
+    {extra ? extra(p) : null}
+  </g>
+);
+
+const WORN = {
+  tee: topShort,
+  blouse: topShort,
+  tank: topTank,
+  babydoll: topBaby,
+  longsleeve: topLong(),
+  knit: topLong((p) => (
+    <g>
+      {line("M41,104 L79,104", 1.2)}
+      {line("M50,60 L50,104", 0.8, 0.45)}
+      {line("M60,60 L60,104", 0.8, 0.45)}
+      {line("M70,60 L70,104", 0.8, 0.45)}
+    </g>
+  )),
+  turtleneck: topLong((p) => <Piece {...p} d="M51,49 L69,49 L69,60 L51,60 Z" />),
+  oxford: topLong((p) => (
+    <g>
+      {line("M52,52 L60,62 L68,52", 1.2)}
+      {line("M60,62 L60,112", 1)}
+    </g>
+  )),
+
+  pants: (p) => (
+    <Piece {...p} d="M42,102 L78,102 C81,140 80,190 76,231 L63,231 C62,190 61,160 60,138 C59,160 58,190 57,231 L44,231 C40,190 39,140 42,102 Z" />
+  ),
+  cargo: (p) => (
+    <g>
+      <Piece {...p} d="M41,102 L79,102 C82,140 81,190 77,231 L63,231 C62,190 61,160 60,138 C59,160 58,190 57,231 L43,231 C39,190 38,140 41,102 Z" />
+      {line("M44,150 L54,150 L54,166 L44,166 Z", 1.2)}
+      {line("M66,150 L76,150 L76,166 L66,166 Z", 1.2)}
+    </g>
+  ),
+  wideleg: (p) => (
+    <Piece {...p} d="M40,102 L80,102 C85,140 87,190 85,231 L64,231 C63,190 62,160 60,138 C58,160 57,190 56,231 L35,231 C33,190 35,140 40,102 Z" />
+  ),
+  shorts: (p) => (
+    <Piece {...p} d="M42,102 L78,102 C80,124 80,152 79,170 L63,170 C62,154 61,146 60,138 C59,146 58,154 57,170 L41,170 C40,152 40,124 42,102 Z" />
+  ),
+  midiSkirt: (p) => (
+    <g>
+      <Piece {...p} d="M42,102 L78,102 C86,138 90,176 90,188 L30,188 C30,176 34,138 42,102 Z" />
+      {line("M42,110 L78,110", 1.1, 0.6)}
+    </g>
+  ),
+  miniSkirt: (p) => (
+    <Piece {...p} d="M42,102 L78,102 C84,124 87,146 87,154 L33,154 C33,146 36,124 42,102 Z" />
+  ),
+  slipSkirt: (p) => (
+    <g>
+      <Piece {...p} d="M42,102 L78,102 C82,150 85,196 85,206 L35,206 C35,196 38,150 42,102 Z" />
+      {line("M46,112 L76,200", 0.9, 0.4)}
+    </g>
+  ),
+
+  trench: (p) => (
+    <g>
+      <Piece {...p} d={SLEEVE_L} />
+      <Piece {...p} d={SLEEVE_R} />
+      <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,100 L84,200 L36,200 L38,100 L36,72 Z" />
+      {line("M52,52 L60,66 L68,52", 1.3)}
+      {line("M60,66 L60,200", 1)}
+      <Piece {...p} d="M37,116 L83,116 L83,126 L37,126 Z" color={p.accent || p.color} />
+    </g>
+  ),
+  overcoat: (p) => (
+    <g>
+      <Piece {...p} d={SLEEVE_L} />
+      <Piece {...p} d={SLEEVE_R} />
+      <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,100 L84,200 L36,200 L38,100 L36,72 Z" />
+      {line("M52,52 L60,66 L68,52", 1.3)}
+      {line("M60,66 L60,200", 1)}
+      <circle cx="53" cy="92" r="2" fill={INK} />
+      <circle cx="67" cy="92" r="2" fill={INK} />
+      <circle cx="53" cy="124" r="2" fill={INK} />
+      <circle cx="67" cy="124" r="2" fill={INK} />
+    </g>
+  ),
+  duster: (p) => (
+    <g>
+      <Piece {...p} d={SLEEVE_L} />
+      <Piece {...p} d={SLEEVE_R} />
+      <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,100 L86,222 L34,222 L38,100 L36,72 Z" />
+      {line("M60,60 L60,222", 1)}
+    </g>
+  ),
+  jacket: (p) => (
+    <g>
+      <Piece {...p} d={SLEEVE_L} />
+      <Piece {...p} d={SLEEVE_R} />
+      <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,96 L83,134 L37,134 L38,96 L36,72 Z" />
+      {line("M60,58 L60,134", 1)}
+      {line("M37,126 L83,126", 1.1)}
+    </g>
+  ),
+  denimJacket: (p) => (
+    <g>
+      <Piece {...p} d={SLEEVE_L} />
+      <Piece {...p} d={SLEEVE_R} />
+      <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,96 L83,134 L37,134 L38,96 L36,72 Z" />
+      {line("M60,58 L60,134", 1)}
+      {line("M37,126 L83,126", 1.1)}
+      {line("M46,76 L54,76 L54,86 L46,86 Z", 1)}
+      {line("M66,76 L74,76 L74,86 L66,86 Z", 1)}
+    </g>
+  ),
+  moto: (p) => (
+    <g>
+      <Piece {...p} d={SLEEVE_L} />
+      <Piece {...p} d={SLEEVE_R} />
+      <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,96 L83,130 L37,130 L38,96 L36,72 Z" />
+      {line("M54,58 L66,128", 1.4)}
+      {line("M42,92 L50,98", 1.2)}
+    </g>
+  ),
+  blazer: (p) => (
+    <g>
+      <Piece {...p} d={SLEEVE_L} />
+      <Piece {...p} d={SLEEVE_R} />
+      <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,100 L83,146 L37,146 L38,100 L36,72 Z" />
+      {line("M50,52 L60,68 L54,92 Z", 1.3)}
+      {line("M70,52 L60,68 L66,92 Z", 1.3)}
+      {line("M54,92 L56,146", 1)}
+      {line("M66,92 L64,146", 1)}
+      <circle cx="60" cy="106" r="2.2" fill={INK} />
+    </g>
+  ),
+  puffer: (p) => (
+    <g>
+      <Piece {...p} d={SLEEVE_L} />
+      <Piece {...p} d={SLEEVE_R} />
+      <Piece {...p} d="M38,58 Q60,48 82,58 L86,72 L84,96 L85,132 L35,132 L36,96 L34,72 Z" />
+      {line("M60,56 L60,132", 1)}
+      {line("M36,78 L84,78", 1.1)}
+      {line("M35,98 L85,98", 1.1)}
+      {line("M35,116 L85,116", 1.1)}
+    </g>
+  ),
+
+  sneaker: (p) => (
+    <g>
+      <Piece {...p} d="M43,226 L59,226 L60,240 Q52,246 40,244 Q38,236 43,226 Z" />
+      <Piece {...p} d="M61,226 L77,226 L80,244 Q68,246 60,240 Z" />
+      {line("M40,240 L60,241 M60,241 L80,241", 1.2)}
+    </g>
+  ),
+  flat: (p) => (
+    <g>
+      <Piece {...p} d="M43,230 L59,230 L60,240 Q52,245 41,243 Q39,236 43,230 Z" />
+      <Piece {...p} d="M61,230 L77,230 L79,243 Q68,245 60,240 Z" />
+    </g>
+  ),
+  sandal: (p) => (
+    <g>
+      <Piece {...p} d="M42,236 L60,236 L60,244 L41,244 Z" />
+      <Piece {...p} d="M60,236 L78,236 L79,244 L60,244 Z" />
+      {line("M44,236 Q51,228 58,234", 1.6)}
+      {line("M62,234 Q69,228 76,236", 1.6)}
+    </g>
+  ),
+  chelsea: (p) => (
+    <g>
+      <Piece {...p} d="M43,192 L59,192 L60,240 Q52,246 40,244 Z" />
+      <Piece {...p} d="M61,192 L77,192 L80,244 Q68,246 60,240 Z" />
+      {line("M40,240 L80,241", 1.2)}
+      {line("M43,198 L59,198 M61,198 L77,198", 1)}
+    </g>
+  ),
+  rainboot: (p) => (
+    <g>
+      <Piece {...p} d="M42,176 L60,176 L60,240 Q52,246 39,244 Z" />
+      <Piece {...p} d="M60,176 L78,176 L81,244 Q68,246 60,240 Z" />
+      {line("M39,240 L81,241", 1.3)}
+      {line("M42,184 L60,184 M60,184 L78,184", 1.1)}
+    </g>
+  ),
+  heel: (p) => (
+    <g>
+      <Piece {...p} d="M43,230 L58,230 L59,241 L44,247 L41,241 Z" />
+      <Piece {...p} d="M62,230 L77,230 L79,241 L64,247 L61,241 Z" />
+      <Piece {...p} d="M53,241 L58,241 L57,254 L53,254 Z" />
+      <Piece {...p} d="M72,241 L77,241 L77,254 L73,254 Z" />
+    </g>
+  ),
+
+  tote: (p) => (
+    <g>
+      {line("M84,140 C84,130 94,130 94,140", 2.2)}
+      <Piece {...p} d="M79,140 L99,140 L101,180 L77,180 Z" />
+    </g>
+  ),
+  crossbody: (p) => (
+    <g>
+      <Piece {...p} d="M44,60 L50,58 L92,130 L86,133 Z" />
+      <Piece {...p} d="M78,130 L100,130 L100,152 L78,152 Z" />
+      {line("M78,136 L100,136", 1.1)}
+    </g>
+  ),
+  clutch: (p) => (
+    <g>
+      <Piece {...p} d="M79,132 L101,132 L101,148 L79,148 Z" />
+      {line("M79,138 L101,138", 1.1)}
+    </g>
+  ),
+  shoulderBag: (p) => (
+    <g>
+      {line("M80,132 C78,116 94,116 94,132", 2)}
+      <Piece {...p} d="M77,132 L97,132 L98,156 L76,156 Z" />
+    </g>
+  ),
+
+  hat: (p) => (
+    <g>
+      <Piece {...p} d="M42,22 Q42,4 60,4 Q78,4 78,22 Z" />
+      <Piece {...p} d="M28,23 Q60,38 92,23 Q60,14 28,23 Z" />
+    </g>
+  ),
+  headband: (p) => (
+    <g>
+      <path d="M40,16 C42,2 78,2 80,16" fill="none" stroke={p.color} strokeWidth="7" strokeLinecap="round" />
+      <path d="M40,16 C42,2 78,2 80,16" fill="none" stroke={INK} strokeWidth="1" opacity="0.5" fillOpacity="0" />
+    </g>
+  ),
+  clip: (p) => (
+    <g>
+      <circle cx="44" cy="20" r="3.4" fill={p.color} stroke={INK} strokeWidth="1.1" />
+      <circle cx="41" cy="28" r="3.4" fill={p.color} stroke={INK} strokeWidth="1.1" />
+      <circle cx="40" cy="36" r="3.4" fill={p.color} stroke={INK} strokeWidth="1.1" />
+    </g>
+  ),
+  sunglasses: (p) => (
+    <g>
+      <Piece {...p} d="M47,26 Q47,22 53,22 Q59,22 59,26 Q59,33 53,33 Q47,33 47,26 Z" sw={1.3} />
+      <Piece {...p} d="M61,26 Q61,22 67,22 Q73,22 73,26 Q73,33 67,33 Q61,33 61,26 Z" sw={1.3} />
+      {line("M59,25 L61,25", 1.4)}
+    </g>
+  ),
+  scarf: (p) => (
+    <g>
+      <Piece {...p} d="M48,54 Q60,64 72,54 L75,64 Q60,76 45,64 Z" />
+      <Piece {...p} d="M55,70 L65,70 L63,92 L57,92 Z" />
+    </g>
+  ),
+  hoops: (p) => (
+    <g>
+      <circle cx="43" cy="36" r="4.6" fill="none" stroke={p.color} strokeWidth="2.4" />
+      <circle cx="77" cy="36" r="4.6" fill="none" stroke={p.color} strokeWidth="2.4" />
+    </g>
+  ),
+  belt: (p) => (
+    <g>
+      <Piece {...p} d="M42,100 L78,100 L78,110 L42,110 Z" sw={1.4} />
+      {line("M56,98 L64,98 L64,112 L56,112 Z", 1.4)}
+    </g>
+  ),
+  gloves: (p) => (
+    <g>
+      <Piece {...p} d="M31,100 L41,102 L36,140 L26,138 Z" />
+      <Piece {...p} d="M89,100 L79,102 L84,140 L94,138 Z" />
+    </g>
+  ),
+  phone: (p) => (
+    <g>
+      {line("M50,60 C56,90 74,118 86,132", 1.6, 0.8)}
+      <Piece {...p} d="M82,130 L94,130 L94,150 L82,150 Z" sw={1.4} />
+    </g>
+  ),
+  watch: (p) => (
+    <g>
+      <Piece {...p} d="M84,126 L93,127 L91,138 L82,137 Z" sw={1.3} />
+    </g>
+  ),
+
+  cat: (p) => (
+    <g>
+      <Piece {...p} d="M8,222 Q8,210 20,210 Q32,210 32,222 L34,246 L6,246 Z M12,212 L10,200 L20,208 Z M28,212 L30,200 L21,208 Z" />
+      {line("M34,240 C46,238 46,226 40,222", 2.4)}
+      <circle cx="15" cy="222" r="1.5" fill={INK} />
+      <circle cx="25" cy="222" r="1.5" fill={INK} />
+    </g>
+  ),
+  dog: (p) => (
+    <g>
+      <Piece {...p} d="M8,222 Q8,210 20,210 Q32,210 32,222 L34,246 L6,246 Z M8,212 Q0,214 2,226 Q7,227 10,220 Z M32,212 Q40,214 38,226 Q33,227 30,220 Z" />
+      {line("M34,238 C42,232 42,224 38,220", 2.4)}
+      <circle cx="15" cy="221" r="1.5" fill={INK} />
+      <circle cx="25" cy="221" r="1.5" fill={INK} />
+    </g>
+  ),
+  bunny: (p) => (
+    <g>
+      <Piece {...p} d="M9,226 Q9,214 20,214 Q31,214 31,226 L33,246 L7,246 Z M14,216 C11,198 12,188 16,188 C20,188 19,202 18,216 Z M26,216 C29,198 28,188 24,188 C20,188 21,202 22,216 Z" />
+      <circle cx="16" cy="226" r="1.4" fill={INK} />
+      <circle cx="24" cy="226" r="1.4" fill={INK} />
+      <circle cx="34" cy="242" r="3.6" fill="none" stroke={INK} strokeWidth="1.3" />
+    </g>
+  ),
+  bird: (p) => (
+    <g>
+      <Piece {...p} d="M10,222 Q10,212 20,212 Q30,212 31,222 Q32,234 22,238 L14,238 Q7,232 10,222 Z" />
+      <circle cx="25" cy="219" r="1.5" fill={INK} />
+      <path d="M31,222 L39,225 L31,227 Z" fill={p.accent || "#D9A02B"} stroke={INK} strokeWidth="1" strokeLinejoin="round" />
+      {line("M16,238 L15,246 M23,238 L24,246", 1.4)}
+    </g>
+  ),
+};
+
+/* ---- hair ---- */
+function HairBack({ style, color }) {
+  const P = { fill: color, stroke: INK, strokeWidth: 1.5, strokeLinejoin: "round" };
+  if (style === "long")
+    return <path {...P} d="M37,28 C37,6 83,6 83,28 C86,66 88,112 84,124 L73,120 C78,84 76,44 74,32 L46,32 C44,44 42,84 47,120 L36,124 C32,112 34,66 37,28 Z" />;
+  if (style === "bob")
+    return <path {...P} d="M37,28 C37,6 83,6 83,28 C83,52 81,62 79,68 L71,64 C75,46 75,34 73,30 L47,30 C45,34 45,46 49,64 L41,68 C39,62 37,52 37,28 Z" />;
+  if (style === "curls")
+    return (
+      <g {...P}>
+        <circle cx="60" cy="11" r="17" />
+        <circle cx="41" cy="21" r="14" />
+        <circle cx="79" cy="21" r="14" />
+        <circle cx="36" cy="36" r="10" />
+        <circle cx="84" cy="36" r="10" />
+      </g>
+    );
+  if (style === "pony")
+    return (
+      <g>
+        <path {...P} d="M84,30 C96,40 98,74 90,98 L80,94 C88,72 86,44 78,34 Z" />
+        <path {...P} d="M37,28 C37,6 83,6 83,28 C83,44 82,52 80,58 L72,54 C75,42 75,34 73,30 L47,30 C45,34 45,42 48,54 L41,58 C39,52 37,44 37,28 Z" />
+      </g>
+    );
+  if (style === "braids")
+    return (
+      <g>
+        <path {...P} d="M36,34 C34,60 32,92 34,118 C34,126 44,126 44,118 C44,94 44,62 46,38 Z" />
+        <path {...P} d="M84,34 C86,60 88,92 86,118 C86,126 76,126 76,118 C76,94 76,62 74,38 Z" />
+        <path {...P} d="M37,30 C37,8 83,8 83,30 C83,42 82,46 81,50 L73,46 C75,38 75,34 73,30 L47,30 C45,34 45,38 47,46 L39,50 C38,46 37,42 37,30 Z" />
+        {[46, 62, 78, 94, 110].map((y) => (
+          <g key={y}>
+            <path d="M35,0 L45,0" transform={"translate(0 " + y + ")"} stroke={INK} strokeWidth="1" opacity="0.5" fill="none" />
+            <path d="M75,0 L85,0" transform={"translate(0 " + y + ")"} stroke={INK} strokeWidth="1" opacity="0.5" fill="none" />
+          </g>
+        ))}
+      </g>
+    );
+  if (style === "scarf")
+    return (
+      <g>
+        <path {...P} d="M36,30 C36,6 84,6 84,30 C84,44 82,54 80,62 L74,66 L46,66 L40,62 C38,54 36,44 36,30 Z" />
+        <path {...P} d="M40,60 C36,74 34,92 38,104 L48,98 C46,86 46,72 48,62 Z" />
+      </g>
+    );
+  if (style === "buns")
+    return (
+      <g>
+        <circle {...P} cx="36" cy="12" r="11" />
+        <circle {...P} cx="84" cy="12" r="11" />
+        <path {...P} d="M38,30 C38,10 82,10 82,30 C82,42 81,48 80,52 L72,48 C75,40 75,34 73,30 L47,30 C45,34 45,40 48,48 L40,52 C39,48 38,42 38,30 Z" />
+      </g>
+    );
+  return <path {...P} d="M39,30 C39,10 81,10 81,30 C81,38 80,42 79,46 L73,42 C75,36 75,32 73,29 L47,29 C45,32 45,36 47,42 L41,46 C40,42 39,38 39,30 Z" />;
+}
+
+function HairFront({ style, color }) {
+  const P = { fill: color, stroke: INK, strokeWidth: 1.4, strokeLinejoin: "round" };
+  if (style === "scarf") return null;
+  if (style === "braids") return <path {...P} d="M42,28 C44,10 76,10 78,28 C74,18 68,22 60,22 C52,22 46,20 42,28 Z" />;
+  if (style === "crop") return <path {...P} d="M42,26 C44,12 76,12 78,26 C72,18 48,18 42,26 Z" />;
+  if (style === "curls") return <path {...P} d="M44,24 C48,12 72,12 76,24 C70,16 50,16 44,24 Z" />;
+  return <path {...P} d="M42,28 C44,10 76,10 78,28 C74,18 68,22 60,22 C52,22 46,20 42,28 Z" />;
+}
+
+/* ---- face ---- */
+function Face({ makeup, glasses, freckles }) {
+  const lip =
+    makeup === "bold" ? "#A3172E" : makeup === "glitter" ? "#C4566F" : makeup === "natural" ? "#B4636B" : "#9C6A63";
+  return (
+    <g>
+      <path d="M50,29 Q53,26 56,29" fill="none" stroke={INK} strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M64,29 Q67,26 70,29" fill="none" stroke={INK} strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M49,23 Q53,21 57,23" fill="none" stroke={INK} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
+      <path d="M63,23 Q67,21 71,23" fill="none" stroke={INK} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
+      <path d="M59,36 Q60,38 61,36" fill="none" stroke={INK} strokeWidth="0.9" opacity="0.5" />
+      <path d="M55,42 Q60,45 65,42 Q60,47 55,42 Z" fill={lip} stroke={INK} strokeWidth="1" strokeLinejoin="round" />
+      {makeup === "liner" && (
+        <g stroke={INK} strokeWidth="1.5" fill="none" strokeLinecap="round">
+          <path d="M49,28 L45,25" />
+          <path d="M71,28 L75,25" />
+        </g>
+      )}
+      {makeup === "natural" && (
+        <g fill="#C97B70" opacity="0.4">
+          <ellipse cx="47" cy="35" rx="5" ry="3" />
+          <ellipse cx="73" cy="35" rx="5" ry="3" />
+        </g>
+      )}
+      {makeup === "glitter" && (
+        <g fill="#D9B44A">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <circle key={i} cx={i < 3 ? 44 + i * 4 : 66 + (i - 3) * 4} cy={i % 2 ? 32 : 35} r="1.3" />
+          ))}
+        </g>
+      )}
+      {freckles && (
+        <g fill={INK} opacity="0.35">
+          {[[45, 34], [49, 37], [44, 39], [71, 34], [75, 37], [70, 39], [57, 36], [63, 37]].map((p, i) => (
+            <circle key={i} cx={p[0]} cy={p[1]} r="0.9" />
+          ))}
+        </g>
+      )}
+      {glasses && (
+        <g fill="none" stroke={INK} strokeWidth="1.5">
+          <rect x="43" y="24" width="15" height="12" rx="3" />
+          <rect x="62" y="24" width="15" height="12" rx="3" />
+          <path d="M58,29 L62,29" />
+          <path d="M43,28 L38,27" />
+          <path d="M77,28 L82,27" />
+        </g>
+      )}
+      {makeup === "bold" && (
+        <g fill="#A3172E" opacity="0.25">
+          <ellipse cx="47" cy="34" rx="5" ry="3" />
+          <ellipse cx="73" cy="34" rx="5" ry="3" />
+        </g>
+      )}
+    </g>
+  );
+}
+
+/* ---- the whole model ---- */
+function Model({ model, items, colors, style, className }) {
+  const m = Object.assign({}, DEFAULT_MODEL, model || {});
+  const skin = skinOf(m);
+  const it = items || {};
+  const cols = colors || {};
+  const B = { fill: skin, stroke: INK, strokeWidth: 1.5, strokeLinejoin: "round" };
+
+  const piece = (slot) => {
+    const item = it[slot] ? BY_ID[it[slot]] : null;
+    if (!item) return null;
+    const render = WORN[item.shape];
+    if (!render) return null;
+    return render({
+      color: cols[slot] || item.color,
+      accent: item.accent || GRAPHITE,
+      pattern: item.pattern,
+    });
+  };
+
+  const headAcc = ["hat", "headband", "clip", "sunglasses", "hoops"];
+  const accItem = it.accessory ? BY_ID[it.accessory] : null;
+  const accOnHead = accItem && headAcc.indexOf(accItem.shape) > -1;
+
+  return (
+    <svg viewBox="0 0 120 260" className={className} style={style} aria-hidden="true">
+      <g transform={poseOf(m)}>
+        <g transform={"translate(0 260) scale(1 " + heightOf(m) + ") translate(0 -260)"}>
+          <HairBack style={m.hair} color={m.hairColor} />
+
+          <path {...B} d="M43,58 C37,64 33,90 30,134 L40,136 C43,96 46,72 50,62 Z" />
+          <path {...B} d="M77,58 C83,64 87,90 90,134 L80,136 C77,96 74,72 70,62 Z" />
+          <circle {...B} cx="35" cy="139" r="5" />
+          <circle {...B} cx="85" cy="139" r="5" />
+          <path {...B} d="M43,136 C41,168 42,202 44,234 L58,234 C58,202 59,168 59,136 Z" />
+          <path {...B} d="M61,136 C61,168 62,202 62,234 L76,234 C78,202 79,168 77,136 Z" />
+          <path {...B} d="M44,102 L76,102 C79,116 78,130 77,140 L43,140 C42,130 41,116 44,102 Z" />
+          <path {...B} d="M42,58 Q60,50 78,58 C80,76 77,92 76,104 L44,104 C43,92 40,76 42,58 Z" />
+          <path {...B} d="M54,46 L66,46 L66,59 L54,59 Z" />
+          <path {...B} d="M60,8 C72,8 79,18 79,30 C79,44 71,53 60,53 C49,53 41,44 41,30 C41,18 48,8 60,8 Z" />
+          <Face makeup={m.makeup} glasses={m.glasses} freckles={m.freckles} />
+          <HairFront style={m.hair} color={m.hairColor} />
+
+          {piece("bottom")}
+          {piece("shoes")}
+          {piece("top")}
+          {piece("outerwear")}
+          {!accOnHead && piece("accessory")}
+          {piece("bag")}
+          {accOnHead && piece("accessory")}
+          {piece("pet")}
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+/* ---- the look, on a plinth ---- */
+function LookCard({ entry, compact }) {
+  return (
+    <div
+      style={{
+        background: CARD,
+        padding: compact ? 6 : 14,
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        aspectRatio: "4 / 5",
+        overflow: "hidden",
+      }}
+    >
+      <Model model={entry.model} items={entry.items} colors={entry.colors} style={{ width: "100%", height: "100%" }} />
+    </div>
+  );
+}
+
+
+
+function crowd(n, offset = 0) {
+  return Array.from({ length: n }).map((_, i) => "crowd-" + (i + 1 + offset));
+}
+
+function buildSeedRaw() {
+  const now = Date.now();
+  const players = {
+    "bot-1": { id: "bot-1", name: "Nadia Okonkwo" },
+    "bot-2": { id: "bot-2", name: "Theo Lindqvist" },
+    "bot-3": { id: "bot-3", name: "Mireille Bassett" },
+    "bot-4": { id: "bot-4", name: "Junsu Park" },
+    "bot-5": { id: "bot-5", name: "Ada Whitlock" },
+    "bot-6": { id: "bot-6", name: "Rosalind Vey" },
+  };
+
+  const rounds = [
+    {
+      id: "r1",
+      number: 1,
+      theme: "All Black Everything",
+      brief: "One colour, no cheating. Texture is your only way out.",
+      themeSetBy: null,
+      previewAt: now - 31 * DAY,
+      opensAt: now - 31 * DAY,
+      closesAt: now - 24 * DAY,
+      voteClosesAt: now - 22 * DAY,
+      winnerEntryId: "e2",
+      advantage: { type: "rare_unlock", playerId: "bot-2", claimedAt: now - 22 * DAY },
+    },
+    {
+      id: "r2",
+      number: 2,
+      theme: "90s Revival",
+      brief: "Slip dresses, mall energy, a video store you never went to.",
+      themeSetBy: null,
+      previewAt: now - 22 * DAY,
+      opensAt: now - 22 * DAY,
+      closesAt: now - 15 * DAY,
+      voteClosesAt: now - 13 * DAY,
+      winnerEntryId: "e8",
+      advantage: {
+        type: "theme_control",
+        playerId: "bot-3",
+        claimedAt: now - 13 * DAY,
+        payload: "Rainy Day Chic",
+      },
+    },
+    {
+      id: "r3",
+      number: 3,
+      theme: "Rainy Day Chic",
+      brief: "It is going to rain all week. Look like you planned it.",
+      themeSetBy: "bot-3",
+      previewAt: now - 3 * DAY,
+      opensAt: now - 3 * DAY,
+      closesAt: now + 4 * DAY,
+      voteClosesAt: now + 6 * DAY,
+      winnerEntryId: null,
+      advantage: null,
+    },
+  ];
+
+  const E = (id, roundId, playerId, name, caption, items, at) => ({
+    id,
+    roundId,
+    playerId,
+    playerName: players[playerId].name,
+    name,
+    caption,
+    items,
+    createdAt: at,
+  });
+
+  const entries = [
+    E("e1", "r1", "bot-1", "Night Shift", "Everything matte except the boots.", { top: "t-turtle", bottom: "b-wide", outerwear: "o-coat", shoes: "s-chelsea", bag: "g-cross", accessory: "a-shades" }, now - 29 * DAY),
+    E("e2", "r1", "bot-2", "Soft Black", "Black does not have to be sharp.", { top: "t-knit", bottom: "b-jeans", outerwear: "o-moto", shoes: "s-sneaker", accessory: "a-hoops" }, now - 28 * DAY),
+    E("e3", "r1", "bot-3", "After Hours", "For a dinner that starts at eleven.", { top: "t-tank", bottom: "b-slip", outerwear: "o-blazer", shoes: "s-heel", bag: "g-clutch" }, now - 28 * DAY),
+    E("e4", "r1", "bot-4", "Utility Void", "Pockets over everything.", { top: "t-tee", bottom: "b-cargo", outerwear: "o-wind", shoes: "s-rain", bag: "g-cross" }, now - 27 * DAY),
+    E("e5", "r1", "bot-5", "Matte Finish", "No shine anywhere. That was the whole rule.", { top: "t-oxford", bottom: "b-pleat", shoes: "s-loafer", bag: "g-shoulder", accessory: "a-belt" }, now - 26 * DAY),
+
+    E("e6", "r2", "bot-1", "Slip and Cardigan", "The uniform of every 1996 magazine.", { top: "t-tank", bottom: "b-slip", shoes: "s-ballet", accessory: "a-hoops" }, now - 20 * DAY),
+    E("e7", "r2", "bot-2", "Mall Rat Deluxe", "Used the archive on a sequin tank. Worth it.", { top: "r-sequin", bottom: "b-jeans", outerwear: "o-denim", shoes: "s-sneaker", bag: "g-cross" }, now - 20 * DAY),
+    E("e8", "r2", "bot-3", "Second Period", "Plaid-adjacent, deeply unserious.", { top: "t-shell", bottom: "b-mini", outerwear: "o-blazer", shoes: "s-loafer", bag: "g-shoulder", accessory: "a-hat" }, now - 19 * DAY),
+    E("e9", "r2", "bot-4", "Grunge, Lightly", "Flannel was taken so I improvised.", { top: "t-band", bottom: "b-jeans", outerwear: "o-denim", shoes: "s-chelsea" }, now - 18 * DAY),
+    E("e10", "r2", "bot-5", "Platform Era", "Three extra inches of confidence.", { top: "t-tank", bottom: "b-slip", outerwear: "o-blazer", shoes: "s-sandal", accessory: "a-hoops" }, now - 18 * DAY),
+    E("e11", "r2", "bot-6", "Windbreaker Hours", "Straight off a disposable camera.", { top: "t-tee", bottom: "b-short", outerwear: "o-wind", shoes: "s-sneaker", bag: "g-market", accessory: "a-hat" }, now - 17 * DAY),
+
+    E("e12", "r3", "bot-1", "Puddle Jumper", "Boots first, everything else negotiable.", { top: "t-knit", bottom: "b-cargo", outerwear: "o-trench", shoes: "s-rain", bag: "g-tote", accessory: "a-hat" }, now - 2.5 * DAY),
+    E("e13", "r3", "bot-4", "Umbrella Optional", "Wide leg, wet ankles, no regrets.", { top: "t-oxford", bottom: "b-wide", outerwear: "o-wind", shoes: "s-chelsea", bag: "g-cross" }, now - 2.2 * DAY),
+    E("e14", "r3", "bot-5", "Grey on Grey", "The sky is the mood board.", { top: "t-turtle", bottom: "b-pleat", outerwear: "o-coat", shoes: "s-loafer", accessory: "a-scarf" }, now - 2 * DAY),
+    E("e15", "r3", "bot-6", "Storm Drain", "Leather does not mind the weather.", { top: "t-tee", bottom: "b-jeans", outerwear: "o-moto", shoes: "s-rain", bag: "g-clutch", accessory: "a-shades" }, now - 1.4 * DAY),
+    E("e16", "r3", "bot-2", "Anorak Hours", "Dressed for a downpour I am choosing to enjoy.", { top: "t-tank", bottom: "b-short", outerwear: "o-wind", shoes: "s-sneaker", bag: "g-market" }, now - 1 * DAY),
+    E("e17", "r3", "bot-3", "Wet Look", "Satin in the rain is a risk. Taking it.", { top: "t-shell", bottom: "b-slip", outerwear: "o-trench", shoes: "s-heel", accessory: "a-belt" }, now - 0.5 * DAY),
+  ];
+
+  const tallies = {
+    e1: 9, e2: 14, e3: 6, e4: 5, e5: 11,
+    e6: 12, e7: 10, e8: 17, e9: 7, e10: 9, e11: 8,
+  };
+  const votes = [];
+  Object.entries(tallies).forEach(([entryId, n]) => {
+    const entry = entries.find((e) => e.id === entryId);
+    crowd(n).forEach((pid) => {
+      votes.push({ roundId: entry.roundId, entryId, playerId: pid + "-" + entry.roundId, weight: 1 });
+    });
+  });
+
+  return { version: 1, players, rounds, entries, votes, createdAt: now };
+}
+
+
+const BOT_MODELS = {
+  "bot-1": { skin: "s5", hair: "curls", hairColor: "#191310", makeup: "bold", height: "tall", pose: "hip" },
+  "bot-2": { skin: "s1", hair: "bob", hairColor: "#C69433", makeup: "liner", height: "average", pose: "front" },
+  "bot-3": { skin: "s3", hair: "long", hairColor: "#4A2C18", makeup: "natural", height: "average", pose: "lean" },
+  "bot-4": { skin: "s4", hair: "crop", hairColor: "#191310", makeup: "bare", height: "petite", pose: "turn" },
+  "bot-5": { skin: "s2", hair: "pony", hairColor: "#B23A48", makeup: "glitter", height: "tall", pose: "front" },
+  "bot-6": { skin: "s6", hair: "buns", hairColor: "#8E5FA8", makeup: "liner", height: "petite", pose: "hip" },
+};
+
+const SEED_EXTRAS = {
+  e12: { pet: "p-dog" },
+  e14: { pet: "p-cat" },
+  e17: { pet: "p-bird" },
+  e6: { pet: "p-bunny" },
+};
+
+const SEED_COLORS = {
+  e15: { top: "#8E2C3E" },
+  e13: { bottom: "#3C6E63" },
+  e10: { bottom: "#C08A2E" },
+};
+
+function buildSeed() {
+  const s = buildSeedRaw();
+  s.version = 2;
+  s.entries.forEach((e) => {
+    e.model = Object.assign({}, BOT_MODELS[e.playerId] || DEFAULT_MODEL);
+    e.colors = SEED_COLORS[e.id] || {};
+    if (SEED_EXTRAS[e.id]) Object.assign(e.items, SEED_EXTRAS[e.id]);
+  });
+  // Seed rows are stamped as old as possible so that anything a real player
+  // has actually done always beats the starter data during a merge.
+  s.rounds.forEach((r) => (r.updatedAt = r.number));
+  s.entries.forEach((e) => (e.updatedAt = 1));
+  Object.keys(s.players).forEach((k) => (s.players[k].updatedAt = 1));
+  s.votes.forEach((v) => {
+    v.category = "main";
+    v.id = v.entryId + "|" + v.playerId + "|main";
+    v.at = 1;
+  });
+  // put the three seeded rounds on the last three actual weeks
+  const weeks = [weekOf(Date.now() - 14 * DAY), weekOf(Date.now() - 7 * DAY), weekOf(Date.now())];
+  s.rounds.forEach((r, i) => {
+    const w = weeks[i];
+    r.previewAt = w.opensAt;
+    r.opensAt = w.opensAt;
+    r.closesAt = w.closesAt;
+    r.voteClosesAt = w.voteClosesAt;
+  });
+  s.rounds.forEach((r) => {
+    const mine = s.entries.filter((e) => e.roundId === r.id);
+    const span = r.closesAt - r.opensAt;
+    mine.forEach((e, i) => {
+      const when = r.opensAt + Math.round((span * (i + 1)) / (mine.length + 1));
+      e.createdAt = Math.min(when, Date.now() - 60000);
+    });
+  });
+  s.rounds.forEach((r) => (r.seasonNumber = 1));
+  s.season = { number: 1, target: SEASON_TARGET, updatedAt: 1 };
+  s.halloffame = [];
+  s.reactions = [];
+
+  // a few side awards already handed out in the finished rounds
+  const sideSeed = [
+    ["e1", "styling", 6], ["e3", "colour", 5], ["e5", "caption", 7],
+    ["e8", "styling", 9], ["e11", "colour", 6], ["e6", "pet", 8], ["e9", "caption", 5],
+  ];
+  sideSeed.forEach(([entryId, cat, n]) => {
+    const entry = s.entries.find((e) => e.id === entryId);
+    if (!entry) return;
+    for (let i = 0; i < n; i++) {
+      const pid = "crowd-" + (i + 1) + "-" + entry.roundId;
+      s.votes.push({
+        id: entryId + "|" + pid + "|" + cat,
+        roundId: entry.roundId, entryId: entryId, playerId: pid,
+        weight: 1, at: 1, category: cat,
+      });
+    }
+  });
+
+  // and some reactions on the live round so it isn't silent
+  const reactSeed = [["e12", 0, 5], ["e14", 2, 4], ["e15", 1, 6], ["e17", 4, 3], ["e13", 3, 2], ["e16", 0, 3]];
+  reactSeed.forEach(([entryId, emojiIdx, n]) => {
+    for (let i = 0; i < n; i++) {
+      const pid = "crowd-" + (i + 1) + "-react";
+      s.reactions.push({
+        id: entryId + "|" + pid + "|" + emojiIdx,
+        roundId: "r3", entryId: entryId, playerId: pid,
+        emoji: REACTIONS[emojiIdx], at: 1,
+      });
+    }
+  });
+  return s;
+}
+
+/* ============================================================
+   SHARED STATE — merge, load, save, poll
+   ============================================================ */
+
+function mergeById(a, b, stamp) {
+  const m = new Map();
+  (a || []).concat(b || []).forEach((x) => {
+    const prev = m.get(x.id);
+    if (!prev || (x[stamp] || 0) >= (prev[stamp] || 0)) m.set(x.id, x);
+  });
+  return Array.from(m.values());
+}
+
+function mergePlayers(a, b) {
+  const out = Object.assign({}, a || {});
+  Object.keys(b || {}).forEach((k) => {
+    const mine = out[k];
+    const theirs = b[k];
+    if (!mine || (theirs.updatedAt || 0) >= (mine.updatedAt || 0)) out[k] = theirs;
+  });
+  return out;
+}
+
+function mergeState(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return {
+    version: 2,
+    createdAt: Math.min(a.createdAt || Infinity, b.createdAt || Infinity),
+    players: mergePlayers(a.players, b.players),
+    rounds: mergeById(a.rounds, b.rounds, "updatedAt").sort((x, y) => x.number - y.number),
+    entries: mergeById(a.entries, b.entries, "updatedAt"),
+    votes: mergeById(a.votes, b.votes, "at"),
+    reactions: mergeById(a.reactions || [], b.reactions || [], "at"),
+    season: (b.season && b.season.updatedAt || 0) >= (a.season && a.season.updatedAt || 0) ? (b.season || a.season) : a.season,
+    halloffame: mergeById(a.halloffame || [], b.halloffame || [], "at"),
+  };
+}
+
+const Sync = {
+  online: false,
+  async pull() {
+    try {
+      const r = await fetch(API, { cache: "no-store" });
+      if (!r.ok) throw new Error(r.status);
+      const j = await r.json();
+      this.online = true;
+      return j && j.rounds ? j : null;
+    } catch (e) {
+      this.online = false;
+      return null;
+    }
+  },
+  async push(state) {
+    try {
+      localStorage.setItem(LKEY, JSON.stringify(state));
+    } catch (e) {}
+    if (!this.online) return state;
+    try {
+      // Read-merge-write. A straight PUT would drop anything another player
+      // saved since our last poll.
+      let merged = state;
+      const r = await fetch(API, { cache: "no-store" });
+      if (r.ok) {
+        const j = await r.json();
+        if (j && j.rounds) merged = mergeState(state, j);
+      }
+      await fetch(API, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(merged),
+      });
+      try { localStorage.setItem(LKEY, JSON.stringify(merged)); } catch (e) {}
+      return merged;
+    } catch (e) {
+      this.online = false;
+      return state;
+    }
+  },
+  local() {
+    try {
+      const raw = localStorage.getItem(LKEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+};
+
+/* ============================================================
+   RULES
+   ============================================================ */
+
+const liveEntries = (s) => s.entries.filter((e) => !e.deleted);
+const liveVotes = (s) => s.votes.filter((v) => !v.removed);
+const liveReactions = (s) => (s.reactions || []).filter((r) => !r.removed);
+
+function phaseOf(round, now) {
+  if (!round) return "none";
+  if (now < round.opensAt) return "preview";
+  if (now < round.closesAt) return "design";
+  if (now < round.voteClosesAt) return "voting";
+  return "results";
+}
+
+const PHASE_LABEL = {
+  preview: "Opening soon",
+  design: "Designing",
+  voting: "Voting open",
+  results: "Results in",
+};
+
+const currentRound = (s) => s.rounds[s.rounds.length - 1];
+const entriesFor = (s, roundId) => liveEntries(s).filter((e) => e.roundId === roundId);
+const tallyFor = (s, entryId, category) =>
+  liveVotes(s)
+    .filter((v) => v.entryId === entryId && (v.category || "main") === (category || "main"))
+    .reduce((n, v) => n + (v.weight || 1), 0);
+
+function rankEntries(s, roundId, category) {
+  return entriesFor(s, roundId)
+    .map((e) => ({ entry: e, votes: tallyFor(s, e.id, category) }))
+    .sort((a, b) => b.votes - a.votes || a.entry.createdAt - b.entry.createdAt);
+}
+
+/* how many votes of a given kind this player has left in this round */
+function votesLeft(s, playerId, roundId, category) {
+  const cap = (AWARD_BY_ID[category] || AWARD_BY_ID.main).votes;
+  const used = liveVotes(s).filter(
+    (v) => v.playerId === playerId && v.roundId === roundId && (v.category || "main") === category
+  ).length;
+  return Math.max(0, cap - used);
+}
+
+function eligibleFor(entry, category) {
+  const a = AWARD_BY_ID[category];
+  if (!a || !a.requires) return true;
+  return !!(entry.items && entry.items[a.requires]);
+}
+
+/* side award winners for a round */
+function awardWinners(s, roundId) {
+  const out = [];
+  AWARDS.forEach((a) => {
+    if (a.id === "main") return;
+    const ranked = rankEntries(s, roundId, a.id).filter((r) => r.votes > 0 && eligibleFor(r.entry, a.id));
+    if (ranked.length) out.push({ award: a, entry: ranked[0].entry, votes: ranked[0].votes });
+  });
+  return out;
+}
+
+const reactionCount = (s, entryId, emoji) =>
+  liveReactions(s).filter((r) => r.entryId === entryId && r.emoji === emoji).length;
+
+/* season table: 10 / 6 / 4 for the podium, 1 for turning up, 2 per side award */
+function standings(s, seasonNumber) {
+  const table = {};
+  const bump = (pid, name, pts, key) => {
+    if (!table[pid]) table[pid] = { playerId: pid, name: name, points: 0, wins: 0, awards: 0, looks: 0 };
+    table[pid].points += pts;
+    if (key) table[pid][key] += 1;
+  };
+  s.rounds
+    .filter((r) => (r.seasonNumber || 1) === seasonNumber && r.winnerEntryId)
+    .forEach((r) => {
+      const ranked = rankEntries(s, r.id);
+      ranked.forEach((x, i) => {
+        bump(x.entry.playerId, x.entry.playerName, i < 3 ? POINTS[i] : POINTS_TAIL, "looks");
+        if (i === 0) table[x.entry.playerId].wins += 1;
+      });
+      awardWinners(s, r.id).forEach((w) => {
+        bump(w.entry.playerId, w.entry.playerName, POINTS_AWARD, "awards");
+      });
+    });
+  return Object.keys(table)
+    .map((k) => table[k])
+    .sort((a, b) => b.points - a.points || b.wins - a.wins || a.name.localeCompare(b.name));
+}
+
+function advantageFor(s, playerId, roundNumber) {
+  const prev = s.rounds.find((r) => r.number === roundNumber - 1);
+  if (!prev || !prev.advantage) return null;
+  if (prev.advantage.playerId !== playerId) return null;
+  if (prev.advantage.type === "theme_control") return null;
+  return prev.advantage.type;
+}
+
+const maxSubmissions = (s, pid, round) =>
+  advantageFor(s, pid, round.number) === "extra_slot" ? 6 : 5;
+
+const wardrobeFor = (s, pid, round) => {
+  const unlocked = advantageFor(s, pid, round.number) === "rare_unlock";
+  return WARDROBE.filter(
+    (i) => (!i.rare || unlocked) && (!i.dropRound || i.dropRound <= round.number)
+  );
+};
+
+const isNewDrop = (item, round) => item.dropRound === round.number;
+
+function autoFinalize(state, now) {
+  let changed = false;
+  const rounds = state.rounds.map((r) => {
+    if (!r.winnerEntryId && now >= r.voteClosesAt + 15000) {
+      const ranked = rankEntries(state, r.id);
+      if (ranked.length) {
+        changed = true;
+        return Object.assign({}, r, { winnerEntryId: ranked[0].entry.id, updatedAt: Date.now() });
+      }
+    }
+    return r;
+  });
+  return changed ? Object.assign({}, state, { rounds }) : null;
+}
+
+/* The week runs Monday to Monday:
+   design Mon 00:00 -> Sat 18:00, vote Sat 18:00 -> Sun 20:00, results Sun night. */
+const CLOSE_DAY = 5;    // Saturday, counting from Monday = 0
+const CLOSE_HOUR = 18;
+const VOTE_DAY = 6;     // Sunday
+const VOTE_HOUR = 20;
+
+function weekOf(ts) {
+  const d = new Date(ts);
+  const back = (d.getDay() + 6) % 7; // days since Monday
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - back, 0, 0, 0, 0);
+  const closes = new Date(monday);
+  closes.setDate(monday.getDate() + CLOSE_DAY);
+  closes.setHours(CLOSE_HOUR, 0, 0, 0);
+  const voteCloses = new Date(monday);
+  voteCloses.setDate(monday.getDate() + VOTE_DAY);
+  voteCloses.setHours(VOTE_HOUR, 0, 0, 0);
+  return { opensAt: monday.getTime(), closesAt: closes.getTime(), voteClosesAt: voteCloses.getTime() };
+}
+
+/* Starting a round drops it into this week if there's still a real week left to
+   design in, otherwise into next Monday. */
+function nextRoundWindow(from) {
+  const thisWeek = weekOf(from);
+  if (thisWeek.closesAt - from >= DAY) return thisWeek;
+  return weekOf(from + 7 * DAY);
+}
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+function whenLabel(ts) {
+  const d = new Date(ts);
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? "pm" : "am";
+  h = h % 12 || 12;
+  return DAY_NAMES[d.getDay()] + " " + h + (m ? ":" + String(m).padStart(2, "0") : "") + ampm;
+}
+
+const uid = (p) => p + "-" + Math.random().toString(36).slice(2, 9);
+
+const DKEY = (roundId) => "runway:draft:" + roundId;
+function loadDraft(roundId) {
+  try {
+    const raw = localStorage.getItem(DKEY(roundId));
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function saveDraft(roundId, d) {
+  try { localStorage.setItem(DKEY(roundId), JSON.stringify(d)); } catch (e) {}
+}
+function clearDraft(roundId) {
+  try { localStorage.removeItem(DKEY(roundId)); } catch (e) {}
+}
+
+function toLocalInput(ts) {
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* ============================================================
+   UI PIECES
+   ============================================================ */
+
+function Rule() {
+  return <div style={{ height: 1, background: HAIR }} />;
+}
+
+function Eyebrow({ children, color = GRAPHITE }) {
+  return (
+    <div style={{ fontFamily: UI, fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", color, fontWeight: 500 }}>
+      {children}
+    </div>
+  );
+}
+
+function Button({ children, onClick, kind = "solid", disabled, full, small }) {
+  const base = {
+    fontFamily: UI,
+    fontSize: small ? 11.5 : 13,
+    letterSpacing: "0.09em",
+    textTransform: "uppercase",
+    fontWeight: 500,
+    padding: small ? "8px 14px" : "13px 22px",
+    border: "1px solid " + INK,
+    cursor: disabled ? "not-allowed" : "pointer",
+    width: full ? "100%" : undefined,
+    opacity: disabled ? 0.35 : 1,
+  };
+  const styles = {
+    solid: Object.assign({}, base, { background: INK, color: PAPER }),
+    ghost: Object.assign({}, base, { background: "transparent", color: INK }),
+    spot: Object.assign({}, base, { background: SPOT, color: "#fff", borderColor: SPOT }),
+    quiet: Object.assign({}, base, { background: "transparent", color: GRAPHITE, border: "1px solid " + HAIR }),
+  };
+  return (
+    <button type="button" onClick={disabled ? undefined : onClick} disabled={disabled} style={styles[kind]}>
+      {children}
+    </button>
+  );
+}
+
+function Field({ label, value, onChange, type = "text", big }) {
+  return (
+    <label style={{ display: "block", marginBottom: 14 }}>
+      <Eyebrow>{label}</Eyebrow>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: "100%",
+          fontFamily: big ? DISPLAY : UI,
+          fontSize: big ? 22 : 14,
+          padding: "8px 0",
+          background: "transparent",
+          border: "none",
+          borderBottom: "1px solid " + INK,
+          outline: "none",
+          marginTop: 4,
+        }}
+      />
+    </label>
+  );
+}
+
+function Countdown({ to, now }) {
+  const ms = Math.max(0, to - now);
+  const parts = [
+    [Math.floor(ms / DAY), "days"],
+    [Math.floor((ms % DAY) / 3600000), "hrs"],
+    [Math.floor((ms % 3600000) / 60000), "min"],
+    [Math.floor((ms % 60000) / 1000), "sec"],
+  ];
+  return (
+    <div className="flex" style={{ gap: 22 }}>
+      {parts.map(([v, l]) => (
+        <div key={l}>
+          <div style={{ fontFamily: DISPLAY, fontSize: 34, lineHeight: 1, fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
+            {String(v).padStart(2, "0")}
+          </div>
+          <div style={{ marginTop: 4 }}><Eyebrow>{l}</Eyebrow></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ItemTile({ item, selected, onClick, fresh }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        textAlign: "left",
+        background: CARD,
+        border: "1px solid " + (selected ? INK : HAIR),
+        outline: selected ? "1px solid " + INK : "none",
+        outlineOffset: -3,
+        padding: 8,
+        cursor: "pointer",
+        width: "100%",
+      }}
+    >
+      <div style={{ position: "relative" }}>
+        <Art item={item} style={{ width: "100%", display: "block" }} />
+        {item.rare && (
+          <div style={{ position: "absolute", top: 2, right: 2, fontFamily: UI, fontSize: 8.5, letterSpacing: "0.14em", color: "#fff", background: SILVER, padding: "2px 5px" }}>
+            ARCHIVE
+          </div>
+        )}
+        {!item.rare && fresh && (
+          <div style={{ position: "absolute", top: 2, right: 2, fontFamily: UI, fontSize: 8.5, letterSpacing: "0.14em", color: "#fff", background: SPOT, padding: "2px 5px" }}>
+            NEW
+          </div>
+        )}
+      </div>
+      <div style={{ fontFamily: DISPLAY, fontSize: 13.5, lineHeight: 1.25, marginTop: 6 }}>{item.name}</div>
+      <div style={{ marginTop: 3 }}><Eyebrow>{item.note}</Eyebrow></div>
+    </button>
+  );
+}
+
+function FlatLay({ items, compact }) {
+  const get = (slot) => (items && items[slot] ? BY_ID[items[slot]] : null);
+  const put = (slot, col, row) => (
+    <div style={{ gridColumn: col, gridRow: row }} className="flex items-center">
+      {get(slot) ? <Art item={get(slot)} style={{ width: "100%" }} /> : null}
+    </div>
+  );
+  return (
+    <div
+      className="grid"
+      style={{
+        gridTemplateColumns: "1fr 1.15fr 0.85fr",
+        gridTemplateRows: "1fr 1fr 1fr",
+        gap: compact ? 2 : 6,
+        background: CARD,
+        padding: compact ? 8 : 16,
+        aspectRatio: "4 / 5",
+      }}
+    >
+      {put("outerwear", "1", "1 / span 2")}
+      {put("top", "2", "1")}
+      {put("bag", "3", "1")}
+      {put("bottom", "2", "2 / span 2")}
+      {put("accessory", "3", "2")}
+      {put("shoes", "1", "3")}
+    </div>
+  );
+}
+
+function EntryCard({ entry, votes, showVotes, anonymous, children }) {
+  return (
+    <div style={{ border: "1px solid " + HAIR, background: PAPER }}>
+      <LookCard entry={entry} />
+      <div style={{ padding: 14, borderTop: "1px solid " + HAIR }}>
+        <div className="flex items-baseline justify-between" style={{ gap: 10 }}>
+          <div style={{ fontFamily: DISPLAY, fontSize: 19, lineHeight: 1.15 }}>{entry.name}</div>
+          {showVotes && (
+            <div style={{ fontFamily: DISPLAY, fontSize: 20, color: SPOT, fontVariantNumeric: "tabular-nums" }}>{votes}</div>
+          )}
+        </div>
+        <div style={{ marginTop: 6 }}>
+          <Eyebrow color={anonymous ? HAIR : GRAPHITE}>{anonymous ? "Designer hidden until results" : entry.playerName}</Eyebrow>
+        </div>
+        {entry.caption ? (
+          <p style={{ fontFamily: DISPLAY, fontSize: 15, fontStyle: "italic", lineHeight: 1.5, color: "#2A2724", marginTop: 10 }}>
+            {entry.caption}
+          </p>
+        ) : null}
+        <div style={{ marginTop: 12 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   SCREENS
+   ============================================================ */
+
+
+function Swatch({ color, on, onClick, label, ring }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      style={{
+        width: 30, height: 30, padding: 0, cursor: "pointer",
+        background: color, borderRadius: "50%",
+        border: "1px solid " + (on ? INK : HAIR),
+        boxShadow: on ? "inset 0 0 0 2px " + (ring || PAPER) : "none",
+      }}
+    />
+  );
+}
+
+function Chip({ children, on, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        fontFamily: UI, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
+        padding: "7px 11px", cursor: "pointer",
+        border: "1px solid " + (on ? INK : HAIR),
+        background: on ? INK : "transparent",
+        color: on ? PAPER : GRAPHITE,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Row({ label, children }) {
+  return (
+    <div style={{ padding: "14px 0", borderBottom: "1px solid " + HAIR }}>
+      <Eyebrow>{label}</Eyebrow>
+      <div className="flex flex-wrap items-center" style={{ gap: 7, marginTop: 9 }}>{children}</div>
+    </div>
+  );
+}
+
+function ModelEditor({ model, onChange }) {
+  const m = Object.assign({}, DEFAULT_MODEL, model || {});
+  const set = (k, v) => onChange(Object.assign({}, m, { [k]: v }));
+  return (
+    <div>
+      <Row label="Skin">
+        {SKINS.map((sk) => (
+          <Swatch key={sk.id} color={sk.color} label={sk.name} on={m.skin === sk.id} onClick={() => set("skin", sk.id)} />
+        ))}
+      </Row>
+      <Row label="Hair">
+        {HAIR_STYLES.map((h) => (
+          <Chip key={h.id} on={m.hair === h.id} onClick={() => set("hair", h.id)}>{h.name}</Chip>
+        ))}
+      </Row>
+      <Row label="Hair colour">
+        {HAIR_COLORS.map((c) => (
+          <Swatch key={c} color={c} on={m.hairColor === c} onClick={() => set("hairColor", c)} />
+        ))}
+      </Row>
+      <Row label="Makeup">
+        {MAKEUPS.map((k) => (
+          <Chip key={k.id} on={m.makeup === k.id} onClick={() => set("makeup", k.id)}>{k.name}</Chip>
+        ))}
+      </Row>
+      <Row label="Height">
+        {HEIGHTS.map((h) => (
+          <Chip key={h.id} on={m.height === h.id} onClick={() => set("height", h.id)}>{h.name}</Chip>
+        ))}
+      </Row>
+      <Row label="Pose">
+        {POSES.map((p) => (
+          <Chip key={p.id} on={m.pose === p.id} onClick={() => set("pose", p.id)}>{p.name}</Chip>
+        ))}
+      </Row>
+      <Row label="Face">
+        <Chip on={!!m.glasses} onClick={() => set("glasses", !m.glasses)}>Glasses</Chip>
+        <Chip on={!!m.freckles} onClick={() => set("freckles", !m.freckles)}>Freckles</Chip>
+      </Row>
+    </div>
+  );
+}
+
+function RunwayShow({ looks, me, canVote, votedIds, onVote, onReact, onClose, state, round, anon }) {
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const n = looks.length;
+  const go = (d) => setI((x) => (x + d + n) % n);
+
+  useEffect(() => {
+    if (!playing || n < 2) return;
+    const t = setTimeout(() => setI((x) => (x + 1) % n), 4200);
+    return () => clearTimeout(t);
+  }, [i, playing, n]);
+
+  useEffect(() => {
+    const k = (e) => {
+      if (e.key === "ArrowRight") go(1);
+      if (e.key === "ArrowLeft") go(-1);
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [n]);
+
+  if (!n) return null;
+  const { entry, votes } = looks[i];
+  const own = entry.playerId === me.id;
+  const voted = votedIds.has(entry.id);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: PAPER, zIndex: 60, display: "flex", flexDirection: "column" }}>
+      <div className="flex items-center justify-between" style={{ padding: "16px 18px", borderBottom: "1px solid " + INK }}>
+        <Eyebrow>The runway, look {i + 1} of {n}</Eyebrow>
+        <button type="button" onClick={onClose} style={{ background: "none", border: "none", fontFamily: DISPLAY, fontSize: 26, lineHeight: 1, cursor: "pointer" }}>×</button>
+      </div>
+
+      <div style={{ flex: "1 1 auto", position: "relative", overflow: "hidden", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "38%", background: CARD, borderTop: "1px solid " + HAIR }} />
+        <div style={{ position: "absolute", left: "50%", bottom: 0, width: 1, height: "38%", background: HAIR }} />
+        <Model
+          key={entry.id}
+          model={entry.model}
+          items={entry.items}
+          colors={entry.colors}
+          style={{ height: "94%", maxWidth: "92%", position: "relative", animation: "walk 620ms ease-out" }}
+        />
+      </div>
+
+      <div style={{ borderTop: "1px solid " + INK, padding: "16px 18px calc(18px + env(safe-area-inset-bottom))" }}>
+        <div className="flex items-baseline justify-between" style={{ gap: 12 }}>
+          <div style={{ fontFamily: DISPLAY, fontSize: 26, lineHeight: 1.1 }}>{entry.name}</div>
+          {canVote && <div style={{ fontFamily: DISPLAY, fontSize: 22, color: SPOT }}>{votes}</div>}
+        </div>
+        <div style={{ marginTop: 6 }}>
+          <Eyebrow color={anon && !own ? HAIR : GRAPHITE}>{anon && !own ? "Designer hidden" : entry.playerName}</Eyebrow>
+        </div>
+        {entry.caption && (
+          <p style={{ fontFamily: DISPLAY, fontStyle: "italic", fontSize: 15, lineHeight: 1.45, marginTop: 8 }}>{entry.caption}</p>
+        )}
+        <div style={{ marginTop: 12 }}>
+          <ReactionRow state={state} entryId={entry.id} me={me} onReact={onReact} small />
+        </div>
+
+        <div className="flex flex-wrap items-center" style={{ gap: 8, marginTop: 12 }}>
+          <Button small kind="quiet" onClick={() => go(-1)}>Back</Button>
+          <Button small kind="quiet" onClick={() => setPlaying(!playing)}>{playing ? "Pause" : "Play"}</Button>
+          <Button small kind="quiet" onClick={() => go(1)}>Next</Button>
+          <ShareLook entry={entry} round={round} designer={anon && !own ? "Runway" : entry.playerName} label="Save" />
+          <div style={{ flex: "1 1 auto" }} />
+          {canVote && !own && (
+            <Button small kind={voted ? "solid" : "spot"} onClick={() => onVote(entry.id, "main")}>{voted ? "Voted" : "Vote"}</Button>
+          )}
+          {own && <Eyebrow>Your look</Eyebrow>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ---- turn a look into a shareable PNG ---- */
+async function exportLook(host, entry, round, designer) {
+  const svg = host.querySelector("svg");
+  if (!svg) throw new Error("nothing to draw");
+  svg.setAttribute("width", "460");
+  svg.setAttribute("height", "794");
+  svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const markup = new XMLSerializer().serializeToString(svg);
+  const url = URL.createObjectURL(new Blob([markup], { type: "image/svg+xml;charset=utf-8" }));
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+
+  const W = 900, H = 1240;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  x.fillStyle = PAPER; x.fillRect(0, 0, W, H);
+  x.fillStyle = CARD; x.fillRect(56, 150, W - 112, 830);
+  x.strokeStyle = HAIR; x.lineWidth = 2; x.strokeRect(56, 150, W - 112, 830);
+  x.drawImage(img, 220, 168, 460, 794);
+  URL.revokeObjectURL(url);
+
+  x.fillStyle = INK;
+  x.font = "600 34px Georgia, 'Times New Roman', serif";
+  x.fillText("Runway", 56, 78);
+  x.fillStyle = GRAPHITE;
+  x.font = "18px Arial, sans-serif";
+  x.fillText((round ? "Round " + String(round.number).padStart(2, "0") + "  \u00b7  " + round.theme : "").toUpperCase(), 56, 112);
+
+  x.fillStyle = INK;
+  x.font = "600 56px Georgia, 'Times New Roman', serif";
+  x.fillText((entry.name || "").slice(0, 26), 56, 1050);
+  x.fillStyle = GRAPHITE;
+  x.font = "20px Arial, sans-serif";
+  x.fillText((designer || entry.playerName || "").toUpperCase(), 56, 1088);
+  if (entry.caption) {
+    x.fillStyle = INK;
+    x.font = "italic 26px Georgia, serif";
+    x.fillText(entry.caption.slice(0, 52), 56, 1140);
+  }
+  x.fillStyle = HAIR;
+  x.fillRect(56, 1180, W - 112, 2);
+
+  const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+  const filename = ((entry.name || "look").replace(/[^a-z0-9]+/gi, "-").toLowerCase()) + ".png";
+  const file = new File([blob], filename, { type: "image/png" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: entry.name }); return; } catch (e) {}
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function ShareLook({ entry, round, designer, label }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!busy) return;
+    let alive = true;
+    const t = setTimeout(() => {
+      exportLook(ref.current, entry, round, designer)
+        .catch(() => alive && setErr(true))
+        .then(() => alive && setBusy(false));
+    }, 50);
+    return () => { alive = false; clearTimeout(t); };
+  }, [busy]);
+
+  return (
+    <span>
+      <Button small kind="quiet" onClick={() => { setErr(false); setBusy(true); }}>
+        {busy ? "Making it" : err ? "Try again" : label || "Save as image"}
+      </Button>
+      {busy && (
+        <div ref={ref} aria-hidden="true" style={{ position: "fixed", left: -4000, top: 0, width: 460, height: 794 }}>
+          <Model model={entry.model} items={entry.items} colors={entry.colors} style={{ width: 460, height: 794 }} />
+        </div>
+      )}
+    </span>
+  );
+}
+
+function ReactionRow({ state, entryId, me, onReact, small }) {
+  if (!state || !me || !onReact) return null;
+  const mine = new Set(
+    liveReactions(state).filter((r) => r.entryId === entryId && r.playerId === me.id).map((r) => r.emoji)
+  );
+  return (
+    <div className="flex flex-wrap" style={{ gap: 5 }}>
+      {REACTIONS.map((emoji) => {
+        const n = reactionCount(state, entryId, emoji);
+        const on = mine.has(emoji);
+        return (
+          <button
+            key={emoji}
+            type="button"
+            onClick={() => onReact(entryId, emoji)}
+            style={{
+              display: "flex", alignItems: "center", gap: 4, cursor: "pointer",
+              padding: small ? "3px 7px" : "5px 9px",
+              fontSize: small ? 12 : 13, lineHeight: 1.2,
+              border: "1px solid " + (on ? INK : HAIR),
+              background: on ? "#fff" : "transparent",
+            }}
+          >
+            <span>{emoji}</span>
+            {n > 0 && (
+              <span style={{ fontFamily: UI, fontSize: 11, color: on ? INK : GRAPHITE, fontVariantNumeric: "tabular-nums" }}>{n}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AwardVotes({ state, entry, me, round, onVote }) {
+  const mine = new Set(
+    liveVotes(state)
+      .filter((v) => v.playerId === me.id && v.roundId === round.id && v.entryId === entry.id)
+      .map((v) => v.category || "main")
+  );
+  return (
+    <div className="flex flex-wrap" style={{ gap: 5, marginTop: 8 }}>
+      {AWARDS.filter((a) => a.id !== "main" && eligibleFor(entry, a.id)).map((a) => {
+        const on = mine.has(a.id);
+        const left = votesLeft(state, me.id, round.id, a.id);
+        const spent = !on && left === 0;
+        return (
+          <button
+            key={a.id}
+            type="button"
+            disabled={spent}
+            onClick={() => onVote(entry.id, a.id)}
+            title={a.blurb}
+            style={{
+              fontFamily: UI, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase",
+              padding: "6px 9px", cursor: spent ? "not-allowed" : "pointer",
+              border: "1px solid " + (on ? SPOT : HAIR),
+              background: on ? SPOT : "transparent",
+              color: on ? "#fff" : spent ? HAIR : GRAPHITE,
+            }}
+          >
+            {a.short}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RoundHome({ state, me, now, go, isHost }) {
+  const round = currentRound(state);
+  const phase = phaseOf(round, now);
+  const entries = entriesFor(state, round.id);
+  const mine = entries.filter((e) => e.playerId === me.id);
+  const max = maxSubmissions(state, me.id, round);
+  const adv = advantageFor(state, me.id, round.number);
+  const target = phase === "preview" ? round.opensAt : phase === "design" ? round.closesAt : round.voteClosesAt;
+  const setter = round.themeSetBy ? state.players[round.themeSetBy] : null;
+
+  return (
+    <div>
+      <div style={{ padding: "28px 0 22px" }}>
+        <Eyebrow>Round {String(round.number).padStart(2, "0")}</Eyebrow>
+        <h1 style={{ fontFamily: DISPLAY, fontSize: "clamp(42px, 13vw, 76px)", lineHeight: 0.94, letterSpacing: "-0.02em", marginTop: 12, fontWeight: 500 }}>
+          {round.theme}
+        </h1>
+        <p style={{ fontFamily: DISPLAY, fontStyle: "italic", fontSize: 18, lineHeight: 1.5, color: "#33302C", marginTop: 16, maxWidth: "34ch" }}>
+          {round.brief}
+        </p>
+        {setter && <div style={{ marginTop: 12 }}><Eyebrow color={SPOT}>Theme set by {setter.name}</Eyebrow></div>}
+      </div>
+
+      <Rule />
+
+      <div style={{ padding: "22px 0" }}>
+        <Eyebrow>{PHASE_LABEL[phase]} closes in</Eyebrow>
+        <div style={{ marginTop: 12 }}><Countdown to={target} now={now} /></div>
+      </div>
+
+      <div style={{ paddingBottom: 20 }}>
+        <div className="flex flex-wrap" style={{ gap: 18 }}>
+          <div>
+            <Eyebrow>Entries close</Eyebrow>
+            <div style={{ fontFamily: DISPLAY, fontSize: 18, marginTop: 4 }}>{whenLabel(round.closesAt)}</div>
+          </div>
+          <div>
+            <Eyebrow>Voting closes</Eyebrow>
+            <div style={{ fontFamily: DISPLAY, fontSize: 18, marginTop: 4 }}>{whenLabel(round.voteClosesAt)}</div>
+          </div>
+          <div>
+            <Eyebrow>Next brief</Eyebrow>
+            <div style={{ fontFamily: DISPLAY, fontSize: 18, marginTop: 4 }}>Monday</div>
+          </div>
+        </div>
+      </div>
+
+      <Rule />
+
+      <div className="grid grid-cols-2" style={{ borderBottom: "1px solid " + HAIR }}>
+        <div style={{ padding: "18px 0", borderRight: "1px solid " + HAIR }}>
+          <div style={{ fontFamily: DISPLAY, fontSize: 40, lineHeight: 1 }}>{entries.length}</div>
+          <div style={{ marginTop: 6 }}><Eyebrow>Looks entered</Eyebrow></div>
+        </div>
+        <div style={{ padding: "18px 0 18px 18px" }}>
+          <div style={{ fontFamily: DISPLAY, fontSize: 40, lineHeight: 1 }}>
+            {mine.length}<span style={{ color: GRAPHITE, fontSize: 22 }}> / {max}</span>
+          </div>
+          <div style={{ marginTop: 6 }}><Eyebrow>Yours</Eyebrow></div>
+        </div>
+      </div>
+
+      {adv && (
+        <div style={{ border: "1px solid " + SPOT, padding: 16, marginTop: 22 }}>
+          <Eyebrow color={SPOT}>Advantage active</Eyebrow>
+          <div style={{ fontFamily: DISPLAY, fontSize: 22, marginTop: 8 }}>{ADVANTAGES[adv].name}</div>
+          <p style={{ fontFamily: UI, fontSize: 13.5, lineHeight: 1.55, color: GRAPHITE, marginTop: 6 }}>{ADVANTAGES[adv].blurb}</p>
+        </div>
+      )}
+
+      <div style={{ marginTop: 26 }}>
+        {phase === "design" && (
+          <Button full onClick={() => go("studio")}>
+            {mine.length ? "Design another look" : "Open the design studio"}
+          </Button>
+        )}
+        {phase === "voting" && <Button full kind="spot" onClick={() => go("gallery")}>Vote in the gallery</Button>}
+        {phase === "results" && <Button full onClick={() => go("results")}>See the results</Button>}
+        {phase === "preview" &&
+          (adv === "early_access" ? (
+            <Button full onClick={() => go("studio")}>Enter early, the wardrobe is open to you</Button>
+          ) : (
+            <Button full disabled>Wardrobe opens soon</Button>
+          ))}
+      </div>
+
+      {mine.length > 0 && (
+        <div style={{ marginTop: 40 }}>
+          <Eyebrow>Your submissions</Eyebrow>
+          <div className="grid grid-cols-2 md:grid-cols-3" style={{ gap: 14, marginTop: 14 }}>
+            {mine.map((e) => (
+              <div key={e.id} style={{ border: "1px solid " + HAIR }}>
+                <LookCard entry={e} compact />
+                <div style={{ padding: 10, borderTop: "1px solid " + HAIR }}>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 15 }}>{e.name}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!isHost && (
+        <p style={{ fontFamily: UI, fontSize: 12.5, color: GRAPHITE, marginTop: 44, lineHeight: 1.6 }}>
+          Every round runs Monday to Monday. Design all week, entries close Saturday evening,
+          voting runs overnight into Sunday, and the next brief lands Monday morning. Nobody
+          sees anyone else's look until entries close.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Studio({ state, me, now, onSubmit, editing, preset, onCancelEdit }) {
+  const round = currentRound(state);
+  const phase = phaseOf(round, now);
+  const adv = advantageFor(state, me.id, round.number);
+  const available = wardrobeFor(state, me.id, round);
+  const mine = entriesFor(state, round.id).filter((e) => e.playerId === me.id);
+  const max = maxSubmissions(state, me.id, round);
+
+  const source = editing || preset || null;
+  const draft = !editing && !preset ? loadDraft(round.id) : null;
+  const base = source || draft;
+  const [picks, setPicks] = useState(base ? base.items : {});
+  const [tints, setTints] = useState(base ? base.colors || {} : {});
+  const [look, setLook] = useState(base && base.model ? base.model : (me.model || DEFAULT_MODEL));
+  const [name, setName] = useState(base ? base.name || "" : "");
+  const [caption, setCaption] = useState(base ? base.caption || "" : "");
+  const [draftNote, setDraftNote] = useState(draft ? "Picked up where you left off." : null);
+  const [filter, setFilter] = useState("top");
+  const [pane, setPane] = useState("wardrobe");
+  const [tinting, setTinting] = useState(null);
+  const [q, setQ] = useState("");
+  const [flash, setFlash] = useState(null);
+
+  const locked = phase === "preview" && adv !== "early_access";
+  const closed = phase !== "design" && phase !== "preview";
+  const atLimit = !editing && mine.length >= max;
+
+  const shown = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return available.filter(
+      (i) =>
+        (filter === "all" || (filter === "new" ? isNewDrop(i, round) : i.slot === filter)) &&
+        (!term || i.name.toLowerCase().includes(term) || (i.note || "").toLowerCase().includes(term))
+    );
+  }, [available, filter, q, round.number]);
+
+  useEffect(() => {
+    if (editing) return;
+    const empty = !name && !caption && Object.keys(picks).length === 0;
+    if (empty) { clearDraft(round.id); return; }
+    saveDraft(round.id, { items: picks, colors: tints, model: look, name: name, caption: caption });
+  }, [picks, tints, look, name, caption, editing, round.id]);
+
+  const missing = SLOTS.filter((s) => s.required && !picks[s.id]);
+  const canSubmit = missing.length === 0 && name.trim().length > 0 && !closed && !locked && !atLimit;
+
+  function toggle(item) {
+    setPicks((p) => {
+      const next = Object.assign({}, p);
+      if (next[item.slot] === item.id) delete next[item.slot];
+      else next[item.slot] = item.id;
+      return next;
+    });
+    setTints((t) => {
+      const next = Object.assign({}, t);
+      delete next[item.slot];
+      return next;
+    });
+  }
+
+  function tint(slot, color) {
+    setTints((t) => {
+      const next = Object.assign({}, t);
+      if (!color) delete next[slot];
+      else next[slot] = color;
+      return next;
+    });
+  }
+
+  function submit() {
+    onSubmit({ name: name.trim(), caption: caption.trim(), items: picks, colors: tints, model: look });
+    setFlash(editing ? "Look updated." : "Look submitted.");
+    if (!editing) { setPicks({}); setTints({}); setName(""); setCaption(""); clearDraft(round.id); setDraftNote(null); }
+    setTimeout(() => setFlash(null), 2600);
+  }
+
+  if (closed)
+    return (
+      <div style={{ padding: "60px 0" }}>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: 34, lineHeight: 1.1 }}>Entries are closed</h2>
+        <p style={{ fontFamily: UI, fontSize: 14, lineHeight: 1.6, color: GRAPHITE, marginTop: 12, maxWidth: "44ch" }}>
+          Round {round.number} has moved on to voting. The studio reopens when the next theme drops.
+        </p>
+      </div>
+    );
+
+  if (locked)
+    return (
+      <div style={{ padding: "60px 0" }}>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: 34, lineHeight: 1.1 }}>The wardrobe is not open yet</h2>
+        <p style={{ fontFamily: UI, fontSize: 14, lineHeight: 1.6, color: GRAPHITE, marginTop: 12, maxWidth: "44ch" }}>
+          Last round's winner has 24 hours alone with it first. Come back when the countdown hits zero.
+        </p>
+      </div>
+    );
+
+  return (
+    <div>
+      <div style={{ padding: "24px 0 18px" }}>
+        <Eyebrow>Designing for {round.theme}</Eyebrow>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: "clamp(30px, 8vw, 48px)", lineHeight: 1, marginTop: 10, fontWeight: 500 }}>
+          {editing ? "Rework a look" : "Build a look"}
+        </h2>
+        <p style={{ fontFamily: UI, fontSize: 13, color: GRAPHITE, marginTop: 10 }}>
+          One piece per slot. Top, bottom and shoes are required.{" "}
+          {editing ? "You are editing " + editing.name + "." : mine.length + " of " + max + " looks used."}
+        </p>
+        {preset && (
+          <p style={{ fontFamily: UI, fontSize: 13, color: SPOT, marginTop: 6 }}>
+            Started from another look in the gallery. Change whatever you like, it submits as your own.
+          </p>
+        )}
+        {adv === "rare_unlock" && (
+          <p style={{ fontFamily: UI, fontSize: 13, color: SPOT, marginTop: 6 }}>The archive is unlocked for you this round.</p>
+        )}
+      </div>
+
+      <Rule />
+
+      <div className="flex flex-col lg:flex-row" style={{ gap: 28, paddingTop: 22 }}>
+        <div className="order-2" style={{ flex: "0 0 auto", width: "100%", maxWidth: 360 }}>
+          <div style={{ marginBottom: 10 }}><Eyebrow>Your look so far</Eyebrow></div>
+          <div style={{ border: "1px solid " + HAIR, background: CARD, padding: 10 }}>
+            <Model model={look} items={picks} colors={tints} style={{ width: "100%", display: "block", aspectRatio: "4 / 5" }} />
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            {SLOTS.map((s) => {
+              const item = picks[s.id] ? BY_ID[picks[s.id]] : null;
+              const shown = item ? tints[s.id] || item.color : null;
+              const open = tinting === s.id;
+              return (
+                <div key={s.id} style={{ borderBottom: "1px solid " + HAIR }}>
+                  <div className="flex items-center justify-between" style={{ padding: "8px 0", gap: 10 }}>
+                    <Eyebrow>{s.single}{s.required ? "" : " (optional)"}</Eyebrow>
+                    <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
+                      <div style={{ fontFamily: DISPLAY, fontSize: 14, color: item ? INK : HAIR, textAlign: "right" }}>
+                        {item ? item.name : "—"}
+                      </div>
+                      {item && (
+                        <button
+                          type="button"
+                          onClick={() => setTinting(open ? null : s.id)}
+                          title="Change the colour"
+                          style={{ width: 22, height: 22, flex: "0 0 auto", borderRadius: "50%", background: shown, border: "1px solid " + (open ? INK : HAIR), cursor: "pointer", padding: 0 }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  {open && item && (
+                    <div className="flex flex-wrap items-center" style={{ gap: 6, padding: "2px 0 12px" }}>
+                      <Chip on={!tints[s.id]} onClick={() => tint(s.id, null)}>As made</Chip>
+                      {RECOLOURS.map((c) => (
+                        <Swatch key={c} color={c} on={tints[s.id] === c} onClick={() => tint(s.id, c)} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop: 20 }}>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value.slice(0, 40))}
+              placeholder="Name this look"
+              style={{ width: "100%", fontFamily: DISPLAY, fontSize: 22, padding: "10px 0", background: "transparent", border: "none", borderBottom: "1px solid " + INK, outline: "none" }}
+            />
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value.slice(0, 140))}
+              placeholder="Add a caption, one line of styling notes"
+              rows={2}
+              style={{ width: "100%", fontFamily: UI, fontSize: 13.5, lineHeight: 1.5, padding: "12px 0 8px", background: "transparent", border: "none", borderBottom: "1px solid " + HAIR, outline: "none", resize: "none", marginTop: 6 }}
+            />
+            <div style={{ marginTop: 6 }}><Eyebrow>{140 - caption.length} characters left</Eyebrow></div>
+          </div>
+
+          {atLimit && (
+            <p style={{ fontFamily: UI, fontSize: 13, color: SPOT, marginTop: 14 }}>
+              You have used all {max} of your looks this round. Delete one from your profile to free a slot.
+            </p>
+          )}
+          {!atLimit && missing.length > 0 && (
+            <p style={{ fontFamily: UI, fontSize: 13, color: GRAPHITE, marginTop: 14 }}>
+              Still needed: {missing.map((m) => m.single.toLowerCase()).join(", ")}.
+            </p>
+          )}
+
+          <div style={{ marginTop: 16 }}>
+            <Button full onClick={submit} disabled={!canSubmit}>{editing ? "Save changes" : "Submit this look"}</Button>
+          </div>
+          {editing && (
+            <div style={{ marginTop: 8 }}><Button full kind="quiet" onClick={onCancelEdit}>Cancel</Button></div>
+          )}
+          {!editing && (Object.keys(picks).length > 0 || name) && (
+            <div className="flex items-center justify-between" style={{ gap: 10, marginTop: 10 }}>
+              <Eyebrow>{draftNote || "Saved as a draft"}</Eyebrow>
+              <Button small kind="quiet" onClick={() => {
+                clearDraft(round.id); setPicks({}); setTints({}); setName(""); setCaption(""); setDraftNote(null);
+              }}>Start over</Button>
+            </div>
+          )}
+          {flash && (
+            <div style={{ marginTop: 12, fontFamily: UI, fontSize: 13, color: SPOT, border: "1px solid " + SPOT, padding: "10px 12px" }}>{flash}</div>
+          )}
+        </div>
+
+        <div className="order-1" style={{ flex: "1 1 auto", minWidth: 0 }}>
+          <div className="flex" style={{ gap: 8, marginBottom: 16 }}>
+            <Chip on={pane === "wardrobe"} onClick={() => setPane("wardrobe")}>Wardrobe</Chip>
+            <Chip on={pane === "model"} onClick={() => setPane("model")}>Your model</Chip>
+          </div>
+
+          {pane === "model" ? (
+            <div>
+              <p style={{ fontFamily: UI, fontSize: 13, color: GRAPHITE, lineHeight: 1.6, marginBottom: 6, maxWidth: "46ch" }}>
+                Your model is saved for next time, and each look remembers the model you sent down the runway in it.
+              </p>
+              <ModelEditor model={look} onChange={setLook} />
+            </div>
+          ) : (
+          <div>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search the wardrobe"
+            style={{ width: "100%", fontFamily: UI, fontSize: 14, padding: "10px 0", background: "transparent", border: "none", borderBottom: "1px solid " + INK, outline: "none" }}
+          />
+          <div className="flex flex-wrap" style={{ gap: 6, margin: "14px 0 18px" }}>
+            {[{ id: "all", label: "Everything" }, { id: "new", label: "New this round" }].concat(SLOTS).map((s) => {
+              const on = filter === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setFilter(s.id)}
+                  style={{ fontFamily: UI, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", padding: "7px 11px", border: "1px solid " + (on ? INK : HAIR), background: on ? INK : "transparent", color: on ? PAPER : GRAPHITE, cursor: "pointer" }}
+                >
+                  {s.label}{picks[s.id] ? " ✓" : ""}
+                </button>
+              );
+            })}
+          </div>
+
+          {shown.length === 0 ? (
+            <p style={{ fontFamily: UI, fontSize: 14, color: GRAPHITE, padding: "30px 0" }}>
+              Nothing matches that search. Try a fabric, a colour, or clear the field.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4" style={{ gap: 10 }}>
+              {shown.map((item) => (
+                <ItemTile key={item.id} item={item} fresh={isNewDrop(item, round)} selected={picks[item.slot] === item.id} onClick={() => toggle(item)} />
+              ))}
+            </div>
+          )}
+          </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Gallery({ state, me, now, onVote, onReact, onRestyle, isHost, onRemove }) {
+  const round = currentRound(state);
+  const phase = phaseOf(round, now);
+  const [sort, setSort] = useState("new");
+  const [showing, setShowing] = useState(false);
+  const canVote = phase === "voting";
+  const weight = advantageFor(state, me.id, round.number) === "double_vote" ? 2 : 1;
+  const anon = phase !== "results" && !isHost;
+  const left = votesLeft(state, me.id, round.id, "main");
+  const sealed = (phase === "design" || phase === "preview") && !isHost;
+
+  const list = useMemo(() => {
+    const e = entriesFor(state, round.id).map((entry) => ({ entry, votes: tallyFor(state, entry.id) }));
+    if (sort === "top") e.sort((a, b) => b.votes - a.votes || a.entry.createdAt - b.entry.createdAt);
+    else e.sort((a, b) => b.entry.createdAt - a.entry.createdAt);
+    return e;
+  }, [state, round.id, sort]);
+
+  const mineList = list.filter((x) => x.entry.playerId === me.id);
+
+  const myVotes = new Set(
+    liveVotes(state)
+      .filter((v) => v.playerId === me.id && v.roundId === round.id && (v.category || "main") === "main")
+      .map((v) => v.entryId)
+  );
+
+  return (
+    <div>
+      <div style={{ padding: "24px 0 18px" }}>
+        <Eyebrow>Round {String(round.number).padStart(2, "0")} gallery</Eyebrow>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: "clamp(30px, 8vw, 48px)", lineHeight: 1, marginTop: 10, fontWeight: 500 }}>{round.theme}</h2>
+        <p style={{ fontFamily: UI, fontSize: 13.5, color: GRAPHITE, marginTop: 10, maxWidth: "48ch", lineHeight: 1.6 }}>
+          {canVote
+            ? "You have three votes for best look, and one vote for each of the four side awards. Not your own looks, and names stay hidden until results."
+            : sealed
+            ? "Design in private all week. Everything unseals when entries close and voting opens."
+            : "Voting has finished for this round."}
+        </p>
+        {canVote && (
+          <div className="flex flex-wrap" style={{ gap: 8, marginTop: 12 }}>
+            {AWARDS.map((a) => {
+              const n = votesLeft(state, me.id, round.id, a.id);
+              return (
+                <div key={a.id} style={{ border: "1px solid " + (n ? HAIR : "transparent"), background: n ? "transparent" : CARD, padding: "6px 10px" }}>
+                  <Eyebrow color={n ? GRAPHITE : HAIR}>{a.short} {n}/{a.votes}</Eyebrow>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {canVote && weight > 1 && (
+          <p style={{ fontFamily: UI, fontSize: 13, color: SPOT, marginTop: 6 }}>Your votes count double this round.</p>
+        )}
+      </div>
+
+      <Rule />
+
+      {sealed && (
+        <div style={{ padding: "34px 0" }}>
+          <div style={{ border: "1px solid " + INK, padding: 22, textAlign: "center" }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 48, lineHeight: 1 }}>{list.length}</div>
+            <div style={{ marginTop: 8 }}>
+              <Eyebrow>{list.length === 1 ? "look entered so far" : "looks entered so far"}</Eyebrow>
+            </div>
+            <p style={{ fontFamily: DISPLAY, fontStyle: "italic", fontSize: 19, lineHeight: 1.5, marginTop: 18, maxWidth: "28ch", marginLeft: "auto", marginRight: "auto" }}>
+              Everything stays sealed until entries close on {whenLabel(round.closesAt)}. Nobody sees anybody else's look before then.
+            </p>
+          </div>
+
+          {mineList.length > 0 && (
+            <div style={{ marginTop: 34 }}>
+              <Eyebrow>Your looks in this round</Eyebrow>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" style={{ gap: 18, marginTop: 14 }}>
+                {mineList.map(({ entry }) => (
+                  <EntryCard key={entry.id} entry={entry} votes={0} showVotes={false}>
+                    <div className="flex flex-wrap" style={{ gap: 6 }}>
+                      <ShareLook entry={entry} round={round} designer={entry.playerName} />
+                    </div>
+                  </EntryCard>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!sealed && list.length > 0 && (
+        <div style={{ padding: "18px 0 4px" }}>
+          <Button full kind="solid" onClick={() => setShowing(true)}>
+            Watch the runway — all {list.length} looks
+          </Button>
+        </div>
+      )}
+
+      {showing && (
+        <RunwayShow
+          looks={list}
+          me={me}
+          state={state}
+          round={round}
+          anon={anon}
+          canVote={canVote}
+          votedIds={myVotes}
+          onVote={onVote}
+          onReact={onReact}
+          onClose={() => setShowing(false)}
+        />
+      )}
+
+      <div className="flex items-center" style={{ gap: 8, padding: "14px 0 20px", display: sealed ? "none" : undefined }}>
+        <Eyebrow>Sort</Eyebrow>
+        {[["new", "Newest"], ["top", "Most voted"]].map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setSort(k)}
+            style={{ fontFamily: UI, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", padding: "6px 10px", border: "1px solid " + (sort === k ? INK : HAIR), background: sort === k ? INK : "transparent", color: sort === k ? PAPER : GRAPHITE, cursor: "pointer" }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {sealed ? null : list.length === 0 ? (
+        <div style={{ padding: "50px 0" }}>
+          <p style={{ fontFamily: DISPLAY, fontSize: 24, lineHeight: 1.3 }}>No looks yet. Be the first on the board.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" style={{ gap: 18 }}>
+          {list.map(({ entry, votes }) => {
+            const own = entry.playerId === me.id;
+            const voted = myVotes.has(entry.id);
+            return (
+              <EntryCard key={entry.id} entry={entry} votes={votes} showVotes={canVote || isHost} anonymous={anon && !own}>
+                {own ? (
+                  <Eyebrow>Your look</Eyebrow>
+                ) : canVote ? (
+                  <div>
+                    <Button
+                      full small
+                      kind={voted ? "solid" : "ghost"}
+                      disabled={!voted && left === 0}
+                      onClick={() => onVote(entry.id, "main")}
+                    >
+                      {voted ? "Voted, tap to undo" : left === 0 ? "No votes left" : "Vote for best look"}
+                    </Button>
+                    <AwardVotes state={state} entry={entry} me={me} round={round} onVote={onVote} />
+                  </div>
+                ) : (
+                  <Eyebrow color={HAIR}>Voting opens when entries close</Eyebrow>
+                )}
+
+                <div style={{ marginTop: 12 }}>
+                  <ReactionRow state={state} entryId={entry.id} me={me} onReact={onReact} small />
+                </div>
+
+                <div className="flex flex-wrap" style={{ gap: 6, marginTop: 10 }}>
+                  <ShareLook entry={entry} round={round} designer={anon && !own ? "Runway" : entry.playerName} />
+                  {isHost && <Button small kind="quiet" onClick={() => onRemove(entry.id)}>Remove</Button>}
+                </div>
+              </EntryCard>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdvantagePicker({ onPick, heading }) {
+  const [choice, setChoice] = useState(null);
+  const [theme, setTheme] = useState("");
+  return (
+    <div style={{ border: "1px solid " + SPOT, padding: 18, marginTop: 22 }}>
+      <Eyebrow color={SPOT}>{heading}</Eyebrow>
+      <div style={{ marginTop: 14 }}>
+        {Object.keys(ADVANTAGES).map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setChoice(key)}
+            style={{ display: "block", width: "100%", textAlign: "left", padding: "12px 14px", marginBottom: 8, border: "1px solid " + (choice === key ? SPOT : HAIR), background: choice === key ? "#fff" : "transparent", cursor: "pointer" }}
+          >
+            <div style={{ fontFamily: DISPLAY, fontSize: 19 }}>{ADVANTAGES[key].name}</div>
+            <div style={{ fontFamily: UI, fontSize: 13, color: GRAPHITE, marginTop: 3, lineHeight: 1.5 }}>{ADVANTAGES[key].blurb}</div>
+          </button>
+        ))}
+      </div>
+      {choice === "theme_control" && (
+        <input
+          value={theme}
+          onChange={(e) => setTheme(e.target.value.slice(0, 44))}
+          placeholder="Next round's theme"
+          style={{ width: "100%", fontFamily: DISPLAY, fontSize: 20, padding: "10px 0", background: "transparent", border: "none", borderBottom: "1px solid " + INK, outline: "none", marginBottom: 14 }}
+        />
+      )}
+      <Button full kind="spot" disabled={!choice || (choice === "theme_control" && !theme.trim())} onClick={() => onPick(choice, theme.trim())}>
+        Claim advantage
+      </Button>
+    </div>
+  );
+}
+
+
+function SeasonTable({ state, me }) {
+  const season = state.season || { number: 1, target: SEASON_TARGET };
+  const table = standings(state, season.number);
+  const done = state.rounds.filter((r) => (r.seasonNumber || 1) === season.number && r.winnerEntryId).length;
+  const top = table.length ? Math.max(1, table[0].points) : 1;
+  const hall = (state.halloffame || []).slice().sort((a, b) => b.season - a.season);
+
+  return (
+    <div style={{ marginTop: 44 }}>
+      <div className="flex items-baseline justify-between" style={{ gap: 12 }}>
+        <Eyebrow>Season {season.number} standings</Eyebrow>
+        <Eyebrow>{done} of {season.target} rounds</Eyebrow>
+      </div>
+
+      <div style={{ height: 3, background: HAIR, marginTop: 10 }}>
+        <div style={{ height: 3, background: INK, width: Math.min(100, (done / season.target) * 100) + "%" }} />
+      </div>
+
+      {season.championId && (
+        <div style={{ border: "1px solid " + INK, background: CARD, padding: 16, marginTop: 16 }}>
+          <Eyebrow>Champion of season {season.number}</Eyebrow>
+          <div style={{ fontFamily: DISPLAY, fontSize: 30, marginTop: 6 }}>{season.championName}</div>
+        </div>
+      )}
+
+      {table.length === 0 ? (
+        <p style={{ fontFamily: UI, fontSize: 13.5, color: GRAPHITE, marginTop: 14 }}>
+          Points appear once the first round is scored.
+        </p>
+      ) : (
+        <div style={{ marginTop: 14 }}>
+          {table.map((p, i) => {
+            const isMe = p.playerId === me.id;
+            return (
+              <div key={p.playerId} style={{ padding: "11px 0", borderBottom: "1px solid " + HAIR }}>
+                <div className="flex items-center" style={{ gap: 12 }}>
+                  <div style={{ width: 24, fontFamily: DISPLAY, fontSize: 16, color: i === 0 ? INK : GRAPHITE, fontVariantNumeric: "tabular-nums" }}>{i + 1}</div>
+                  <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                    <div style={{ fontFamily: DISPLAY, fontSize: 17, lineHeight: 1.2 }}>
+                      {p.name}{isMe ? " (you)" : ""}
+                    </div>
+                    <div style={{ marginTop: 2 }}>
+                      <Eyebrow>{p.wins} {p.wins === 1 ? "win" : "wins"}, {p.awards} awards, {p.looks} looks</Eyebrow>
+                    </div>
+                    <div style={{ height: 3, background: i === 0 ? SPOT : HAIR, width: (p.points / top) * 100 + "%", marginTop: 7, minWidth: 2 }} />
+                  </div>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 20, fontVariantNumeric: "tabular-nums", color: i === 0 ? SPOT : INK }}>{p.points}</div>
+                </div>
+              </div>
+            );
+          })}
+          <p style={{ fontFamily: UI, fontSize: 12, color: GRAPHITE, marginTop: 10, lineHeight: 1.6 }}>
+            Ten points for winning a round, six for second, four for third, one for entering, two for every side award.
+          </p>
+        </div>
+      )}
+
+      {hall.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <Eyebrow>Hall of fame</Eyebrow>
+          <div style={{ marginTop: 10 }}>
+            {hall.map((h) => (
+              <div key={h.id} className="flex items-baseline justify-between" style={{ padding: "10px 0", borderBottom: "1px solid " + HAIR, gap: 12 }}>
+                <div style={{ fontFamily: DISPLAY, fontSize: 18 }}>
+                  <span style={{ color: GRAPHITE, fontSize: 14 }}>Season {h.season}&nbsp;&nbsp;</span>
+                  {h.championName}
+                </div>
+                <Eyebrow>{h.points} pts</Eyebrow>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Results({ state, me, now, onClaim, isHost, onRestyle }) {
+  const finished = state.rounds.filter((r) => phaseOf(r, now) === "results").sort((a, b) => b.number - a.number);
+  const [openId, setOpenId] = useState(null);
+
+  if (!finished.length)
+    return (
+      <div style={{ padding: "60px 0" }}>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: 34, lineHeight: 1.1 }}>No results yet</h2>
+        <p style={{ fontFamily: UI, fontSize: 14, lineHeight: 1.6, color: GRAPHITE, marginTop: 12, maxWidth: "44ch" }}>
+          The round is still running. Rankings appear here the moment voting closes.
+        </p>
+      </div>
+    );
+
+  const latest = finished[0];
+  const ranked = rankEntries(state, latest.id);
+  const live = currentRound(state);
+  const livePhase = phaseOf(live, now);
+  const canRestyle = live.id !== latest.id && (livePhase === "design" || livePhase === "preview");
+  const winner = ranked[0];
+  const iWon = winner && winner.entry.playerId === me.id;
+  const topVotes = winner ? Math.max(1, winner.votes) : 1;
+
+  return (
+    <div>
+      <div style={{ padding: "24px 0 18px" }}>
+        <Eyebrow>Round {String(latest.number).padStart(2, "0")} final</Eyebrow>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: "clamp(30px, 8vw, 48px)", lineHeight: 1, marginTop: 10, fontWeight: 500 }}>{latest.theme}</h2>
+      </div>
+
+      {winner && (
+        <div style={{ border: "1px solid " + INK, background: CARD }}>
+          <div style={{ padding: "14px 16px", borderBottom: "1px solid " + INK }}><Eyebrow color={INK}>Winning look</Eyebrow></div>
+          <LookCard entry={winner.entry} />
+          <div style={{ padding: 18, borderTop: "1px solid " + HAIR }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 30, lineHeight: 1.05 }}>{winner.entry.name}</div>
+            <div style={{ marginTop: 8 }}><Eyebrow>{winner.entry.playerName}, {winner.votes} votes</Eyebrow></div>
+            {winner.entry.caption && (
+              <p style={{ fontFamily: DISPLAY, fontStyle: "italic", fontSize: 17, lineHeight: 1.5, marginTop: 12 }}>{winner.entry.caption}</p>
+            )}
+            <div className="flex flex-wrap" style={{ gap: 6, marginTop: 14 }}>
+              <ShareLook entry={winner.entry} round={latest} designer={winner.entry.playerName} />
+              {canRestyle && (
+                <Button small kind="quiet" onClick={() => onRestyle(winner.entry)}>Restyle this</Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {latest.advantage ? (
+        <div style={{ border: "1px solid " + HAIR, padding: 16, marginTop: 18 }}>
+          <Eyebrow>Advantage claimed</Eyebrow>
+          <div style={{ fontFamily: DISPLAY, fontSize: 22, marginTop: 8 }}>
+            {ADVANTAGES[latest.advantage.type].name}
+            {latest.advantage.payload ? ': "' + latest.advantage.payload + '"' : ""}
+          </div>
+          <p style={{ fontFamily: UI, fontSize: 13.5, color: GRAPHITE, marginTop: 6, lineHeight: 1.55 }}>{ADVANTAGES[latest.advantage.type].blurb}</p>
+        </div>
+      ) : iWon ? (
+        <AdvantagePicker heading="You won. Choose your advantage" onPick={(t, p) => onClaim(latest.id, t, p, winner.entry.playerId)} />
+      ) : isHost ? (
+        <AdvantagePicker
+          heading={"Choose on behalf of " + (winner ? winner.entry.playerName : "the winner")}
+          onPick={(t, p) => onClaim(latest.id, t, p, winner.entry.playerId)}
+        />
+      ) : (
+        <div style={{ border: "1px dashed " + HAIR, padding: 16, marginTop: 18 }}>
+          <Eyebrow>Advantage pending</Eyebrow>
+          <p style={{ fontFamily: UI, fontSize: 13.5, color: GRAPHITE, marginTop: 6 }}>
+            {winner ? winner.entry.playerName : "The winner"} has not picked yet.
+          </p>
+        </div>
+      )}
+
+      {awardWinners(state, latest.id).length > 0 && (
+        <div style={{ marginTop: 30 }}>
+          <Eyebrow>Side awards</Eyebrow>
+          <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12, marginTop: 12 }}>
+            {awardWinners(state, latest.id).map((w) => (
+              <div key={w.award.id} className="flex items-center" style={{ gap: 12, border: "1px solid " + HAIR, padding: 10 }}>
+                <div style={{ width: 54, flex: "0 0 auto", border: "1px solid " + HAIR }}>
+                  <LookCard entry={w.entry} compact />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 17, lineHeight: 1.15 }}>{w.award.name}</div>
+                  <div style={{ marginTop: 3 }}><Eyebrow>{w.entry.playerName}, {w.votes} votes</Eyebrow></div>
+                  <div style={{ fontFamily: DISPLAY, fontStyle: "italic", fontSize: 14, color: GRAPHITE, marginTop: 3 }}>
+                    {w.entry.name}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginTop: 34 }}>
+        <Eyebrow>Full ranking</Eyebrow>
+        <div style={{ marginTop: 12 }}>
+          {ranked.map((r, i) => (
+            <div key={r.entry.id} style={{ padding: "12px 0", borderBottom: "1px solid " + HAIR }}>
+              <div className="flex items-center" style={{ gap: 12 }}>
+                <div style={{ fontFamily: DISPLAY, fontSize: 17, width: 26, color: i === 0 ? INK : GRAPHITE, fontVariantNumeric: "tabular-nums" }}>{i + 1}</div>
+                <div style={{ width: 46, flex: "0 0 auto", border: "1px solid " + HAIR }}><LookCard entry={r.entry} compact /></div>
+                <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 16, lineHeight: 1.2 }}>{r.entry.name}</div>
+                  <div style={{ marginTop: 2 }}><Eyebrow>{r.entry.playerName}</Eyebrow></div>
+                  <div style={{ height: 3, background: i === 0 ? SPOT : HAIR, width: (r.votes / topVotes) * 100 + "%", marginTop: 7, minWidth: 2 }} />
+                </div>
+                <div style={{ fontFamily: DISPLAY, fontSize: 18, fontVariantNumeric: "tabular-nums", color: i === 0 ? SPOT : INK }}>{r.votes}</div>
+              </div>
+              {canRestyle && (
+                <div style={{ marginTop: 8, paddingLeft: 38 }}>
+                  <Button small kind="quiet" onClick={() => onRestyle(r.entry)}>Restyle this</Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <SeasonTable state={state} me={me} />
+
+      {finished.length > 1 && (
+        <div style={{ marginTop: 40 }}>
+          <Eyebrow>Archive</Eyebrow>
+          <div style={{ marginTop: 12 }}>
+            {finished.slice(1).map((r) => {
+              const rk = rankEntries(state, r.id);
+              const w = rk[0];
+              const open = openId === r.id;
+              return (
+                <div key={r.id} style={{ borderTop: "1px solid " + HAIR }}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(open ? null : r.id)}
+                    style={{ width: "100%", textAlign: "left", padding: "16px 0", background: "transparent", border: "none", cursor: "pointer" }}
+                  >
+                    <div className="flex items-baseline justify-between" style={{ gap: 12 }}>
+                      <div style={{ fontFamily: DISPLAY, fontSize: 22 }}>
+                        <span style={{ color: GRAPHITE, fontSize: 15 }}>{String(r.number).padStart(2, "0")}&nbsp;&nbsp;</span>
+                        {r.theme}
+                      </div>
+                      <div style={{ fontFamily: UI, fontSize: 18, color: GRAPHITE }}>{open ? "–" : "+"}</div>
+                    </div>
+                    {w && <div style={{ marginTop: 6 }}><Eyebrow>Won by {w.entry.playerName} with "{w.entry.name}"</Eyebrow></div>}
+                  </button>
+                  {open && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3" style={{ gap: 12, paddingBottom: 20 }}>
+                      {rk.map((x, i) => (
+                        <div key={x.entry.id} style={{ border: "1px solid " + HAIR }}>
+                          <LookCard entry={x.entry} compact />
+                          <div style={{ padding: 10, borderTop: "1px solid " + HAIR }}>
+                            <div style={{ fontFamily: DISPLAY, fontSize: 14, lineHeight: 1.2 }}>{i + 1}. {x.entry.name}</div>
+                            <div style={{ marginTop: 3 }}><Eyebrow>{x.entry.playerName}, {x.votes} votes</Eyebrow></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Profile({ state, me, now, onRename, onDelete, onEdit, isHost, onHostIn, onHostOut, onSignOut, onModel }) {
+  const [nameDraft, setNameDraft] = useState(me.name);
+  const [code, setCode] = useState("");
+  const [codeErr, setCodeErr] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [editModel, setEditModel] = useState(false);
+  const mine = liveEntries(state).filter((e) => e.playerId === me.id).sort((a, b) => b.createdAt - a.createdAt);
+  const wins = state.rounds.filter((r) => {
+    const w = r.winnerEntryId && state.entries.find((e) => e.id === r.winnerEntryId);
+    return w && w.playerId === me.id;
+  });
+  const votesReceived = mine.reduce((s, e) => s + tallyFor(state, e.id), 0);
+  const votesCast = liveVotes(state).filter((v) => v.playerId === me.id).length;
+  const round = currentRound(state);
+  const phase = phaseOf(round, now);
+  const adv = advantageFor(state, me.id, round.number);
+
+  return (
+    <div>
+      <div style={{ padding: "24px 0 18px" }}>
+        <Eyebrow>Your file</Eyebrow>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: "clamp(32px, 9vw, 54px)", lineHeight: 1, marginTop: 10, fontWeight: 500 }}>{me.name}</h2>
+      </div>
+
+      <Rule />
+
+      <div className="grid grid-cols-3" style={{ borderBottom: "1px solid " + HAIR }}>
+        {[[mine.length, "Looks"], [wins.length, "Wins"], [votesReceived, "Votes won"]].map(([v, l], i) => (
+          <div key={l} style={{ padding: "18px 0 18px " + (i ? "16px" : "0"), borderRight: i < 2 ? "1px solid " + HAIR : "none" }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 36, lineHeight: 1 }}>{v}</div>
+            <div style={{ marginTop: 6 }}><Eyebrow>{l}</Eyebrow></div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <Eyebrow>Advantages</Eyebrow>
+        {adv ? (
+          <div style={{ border: "1px solid " + SPOT, padding: 16, marginTop: 10 }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 21 }}>{ADVANTAGES[adv].name}</div>
+            <p style={{ fontFamily: UI, fontSize: 13.5, color: GRAPHITE, marginTop: 6, lineHeight: 1.55 }}>
+              Active in round {round.number}. {ADVANTAGES[adv].blurb}
+            </p>
+          </div>
+        ) : (
+          <p style={{ fontFamily: UI, fontSize: 13.5, color: GRAPHITE, marginTop: 8, lineHeight: 1.6, maxWidth: "46ch" }}>
+            None active. Win a round and you pick one for the week after.
+          </p>
+        )}
+      </div>
+
+      <div style={{ marginTop: 34 }}>
+        <Eyebrow>Your looks</Eyebrow>
+        {mine.length === 0 ? (
+          <p style={{ fontFamily: DISPLAY, fontSize: 22, lineHeight: 1.35, marginTop: 12, maxWidth: "30ch" }}>
+            Nothing here yet. The wardrobe is open, go build something.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3" style={{ gap: 14, marginTop: 14 }}>
+            {mine.map((e) => {
+              const r = state.rounds.find((x) => x.id === e.roundId);
+              const editable = r && r.id === round.id && (phase === "design" || phase === "preview");
+              return (
+                <div key={e.id} style={{ border: "1px solid " + HAIR }}>
+                  <LookCard entry={e} compact />
+                  <div style={{ padding: 10, borderTop: "1px solid " + HAIR }}>
+                    <div style={{ fontFamily: DISPLAY, fontSize: 15, lineHeight: 1.2 }}>{e.name}</div>
+                    <div style={{ marginTop: 4 }}>
+                      <Eyebrow>{r ? r.theme : "No round"}</Eyebrow>
+                      <div style={{ fontFamily: UI, fontSize: 12, color: GRAPHITE, marginTop: 3 }}>{tallyFor(state, e.id)} votes</div>
+                    </div>
+                    {editable && (
+                      <div className="flex" style={{ gap: 6, marginTop: 10 }}>
+                        <Button small kind="quiet" onClick={() => onEdit(e)}>Edit</Button>
+                        <Button small kind="quiet" onClick={() => onDelete(e.id)}>Delete</Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: 36, borderTop: "1px solid " + HAIR, paddingTop: 20 }}>
+        <div className="flex items-center justify-between" style={{ gap: 12 }}>
+          <Eyebrow>Your model</Eyebrow>
+          <Button small kind="quiet" onClick={() => setEditModel(!editModel)}>{editModel ? "Done" : "Change"}</Button>
+        </div>
+        <div className="flex items-start" style={{ gap: 16, marginTop: 12 }}>
+          <div style={{ width: 110, flex: "0 0 auto", background: CARD, border: "1px solid " + HAIR, padding: 8 }}>
+            <Model model={me.model} items={{}} style={{ width: "100%", display: "block" }} />
+          </div>
+          {!editModel && (
+            <p style={{ fontFamily: UI, fontSize: 13, color: GRAPHITE, lineHeight: 1.6 }}>
+              This is who walks for you by default. Each look you submit keeps the model you styled it on.
+            </p>
+          )}
+        </div>
+        {editModel && (
+          <div style={{ marginTop: 14 }}>
+            <ModelEditor model={me.model} onChange={onModel} />
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: 36, borderTop: "1px solid " + HAIR, paddingTop: 20 }}>
+        <Eyebrow>Your pin</Eyebrow>
+        <div className="flex items-center justify-between" style={{ gap: 12, marginTop: 10 }}>
+          <div style={{ fontFamily: DISPLAY, fontSize: 34, letterSpacing: "0.34em", lineHeight: 1 }}>
+            {showPin ? me.pin || "----" : "••••"}
+          </div>
+          <Button small kind="quiet" onClick={() => setShowPin(!showPin)}>{showPin ? "Hide" : "Show"}</Button>
+        </div>
+        <p style={{ fontFamily: UI, fontSize: 12.5, color: GRAPHITE, marginTop: 10, lineHeight: 1.6, maxWidth: "46ch" }}>
+          Type this on any phone to pick up your looks, wins and advantages. Anyone who knows it can play as you, so keep it to yourself.
+        </p>
+        <div style={{ marginTop: 12 }}>
+          <Button small kind="quiet" onClick={() => { if (window.confirm("Sign out? You'll need your pin to get back in.")) onSignOut(); }}>
+            Sign out of this device
+          </Button>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 40 }}>
+        <Eyebrow>Display name</Eyebrow>
+        <div className="flex" style={{ gap: 8, marginTop: 10 }}>
+          <input
+            value={nameDraft}
+            onChange={(ev) => setNameDraft(ev.target.value.slice(0, 28))}
+            style={{ flex: "1 1 auto", fontFamily: DISPLAY, fontSize: 18, padding: "8px 0", background: "transparent", border: "none", borderBottom: "1px solid " + INK, outline: "none", minWidth: 0 }}
+          />
+          <Button small kind="ghost" onClick={() => onRename(nameDraft.trim())} disabled={!nameDraft.trim()}>Save</Button>
+        </div>
+        <p style={{ fontFamily: UI, fontSize: 12.5, color: GRAPHITE, marginTop: 18, lineHeight: 1.6 }}>Votes cast so far: {votesCast}.</p>
+      </div>
+
+      <div style={{ marginTop: 34, borderTop: "1px solid " + HAIR, paddingTop: 20 }}>
+        <Eyebrow>Host access</Eyebrow>
+        {isHost ? (
+          <div style={{ marginTop: 10 }}>
+            <p style={{ fontFamily: UI, fontSize: 13, color: GRAPHITE, marginBottom: 10 }}>You are running this season.</p>
+            <Button small kind="quiet" onClick={onHostOut}>Leave host mode</Button>
+          </div>
+        ) : (
+          <div style={{ marginTop: 10 }}>
+            <div className="flex" style={{ gap: 8 }}>
+              <input
+                value={code}
+                onChange={(e) => { setCode(e.target.value); setCodeErr(false); }}
+                placeholder="Host passphrase"
+                type="password"
+                style={{ flex: "1 1 auto", fontFamily: UI, fontSize: 14, padding: "8px 0", background: "transparent", border: "none", borderBottom: "1px solid " + HAIR, outline: "none", minWidth: 0 }}
+              />
+              <Button small kind="ghost" onClick={() => { if (code === HOST_CODE) onHostIn(); else setCodeErr(true); }}>Unlock</Button>
+            </div>
+            {codeErr && <p style={{ fontFamily: UI, fontSize: 12.5, color: SPOT, marginTop: 8 }}>That passphrase doesn't match. Ask whoever set the season up.</p>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HostPanel({ state, now, onRound, onPatch, onReset, onImport, onSeason, sync }) {
+  const round = currentRound(state);
+  const phase = phaseOf(round, now);
+  const [theme, setTheme] = useState(round.theme);
+  const [brief, setBrief] = useState(round.brief);
+  const [closes, setCloses] = useState(toLocalInput(round.closesAt));
+  const [voteCloses, setVoteCloses] = useState(toLocalInput(round.voteClosesAt));
+  const [msg, setMsg] = useState(null);
+  const fileRef = useRef(null);
+
+  useEffect(() => {
+    setTheme(round.theme);
+    setBrief(round.brief);
+    setCloses(toLocalInput(round.closesAt));
+    setVoteCloses(toLocalInput(round.voteClosesAt));
+  }, [round.id]);
+
+  function flash(t) {
+    setMsg(t);
+    setTimeout(() => setMsg(null), 2500);
+  }
+
+  function saveRound() {
+    onPatch({
+      theme: theme.trim() || round.theme,
+      brief: brief.trim(),
+      closesAt: new Date(closes).getTime(),
+      voteClosesAt: new Date(voteCloses).getTime(),
+    });
+    flash("Round updated.");
+  }
+
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "runway-season.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function importJson(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!parsed.rounds) throw new Error("bad");
+        onImport(parsed);
+        flash("Season imported.");
+      } catch (err) {
+        flash("That file isn't a Runway season.");
+      }
+    };
+    reader.readAsText(f);
+  }
+
+  const ranked = rankEntries(state, round.id);
+  const season = state.season || { number: 1, target: SEASON_TARGET };
+  const doneRounds = state.rounds.filter((r) => (r.seasonNumber || 1) === season.number && r.winnerEntryId).length;
+
+  return (
+    <div>
+      <div style={{ padding: "24px 0 18px" }}>
+        <Eyebrow color={SPOT}>Host</Eyebrow>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: "clamp(30px, 8vw, 48px)", lineHeight: 1, marginTop: 10, fontWeight: 500 }}>Run the season</h2>
+        <p style={{ fontFamily: UI, fontSize: 13.5, color: GRAPHITE, marginTop: 10, lineHeight: 1.6, maxWidth: "50ch" }}>
+          Round {round.number} is in the {PHASE_LABEL[phase].toLowerCase()} phase with {entriesFor(state, round.id).length} entries.
+          Shared state is {sync ? "live for every player." : "not reachable, so changes stay on this device."}
+        </p>
+      </div>
+
+      <Rule />
+
+      <div style={{ padding: "22px 0" }}>
+        <Eyebrow>Move the round along</Eyebrow>
+        <div className="flex flex-wrap" style={{ gap: 8, marginTop: 12 }}>
+          <Button small kind="quiet" disabled={phase !== "design" && phase !== "preview"} onClick={() => { onRound("close-entries"); flash("Entries closed, voting is open."); }}>
+            Close entries, start voting
+          </Button>
+          <Button small kind="quiet" disabled={phase !== "voting"} onClick={() => { onRound("close-voting"); flash("Voting closed."); }}>
+            Close voting
+          </Button>
+          <Button small kind="quiet" disabled={phase === "results"} onClick={() => { onRound("extend"); flash("Deadline pushed a day."); }}>
+            Add a day
+          </Button>
+          <Button small kind="spot" disabled={phase !== "results" || !round.advantage} onClick={() => { onRound("next-round"); flash("Round " + (round.number + 1) + " is live."); }}>
+            Start round {round.number + 1}
+          </Button>
+        </div>
+        {phase === "results" && !round.advantage && (
+          <p style={{ fontFamily: UI, fontSize: 12.5, color: SPOT, marginTop: 10 }}>
+            Pick the advantage on the results screen first, then the next round can open.
+          </p>
+        )}
+      </div>
+
+      <Rule />
+
+      <div style={{ padding: "22px 0" }}>
+        <Eyebrow>This round's brief</Eyebrow>
+        <div style={{ marginTop: 14 }}>
+          <Field label="Theme" value={theme} onChange={setTheme} big />
+          <label style={{ display: "block", marginBottom: 14 }}>
+            <Eyebrow>Brief</Eyebrow>
+            <textarea
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+              rows={2}
+              style={{ width: "100%", fontFamily: UI, fontSize: 14, lineHeight: 1.5, padding: "8px 0", background: "transparent", border: "none", borderBottom: "1px solid " + INK, outline: "none", resize: "none", marginTop: 4 }}
+            />
+          </label>
+          <Field label="Entries close" value={closes} onChange={setCloses} type="datetime-local" />
+          <Field label="Voting closes" value={voteCloses} onChange={setVoteCloses} type="datetime-local" />
+          <Button small kind="ghost" onClick={saveRound}>Save round</Button>
+        </div>
+      </div>
+
+      <Rule />
+
+      <div style={{ padding: "22px 0" }}>
+        <Eyebrow>The season</Eyebrow>
+        <p style={{ fontFamily: UI, fontSize: 13, color: GRAPHITE, marginTop: 8, lineHeight: 1.6, maxWidth: "50ch" }}>
+          Season {season.number}, {doneRounds} of {season.target} rounds scored.
+          {season.championId ? " " + season.championName + " has been crowned." : " Crown a champion whenever you like — it doesn't stop play."}
+        </p>
+        <div className="flex flex-wrap" style={{ gap: 8, marginTop: 12 }}>
+          <Button small kind="quiet" onClick={() => { onSeason("target", season.target - 1); }} disabled={season.target <= 1}>Shorter season</Button>
+          <Button small kind="quiet" onClick={() => { onSeason("target", season.target + 1); }}>Longer season</Button>
+          <Button small kind="spot" disabled={!!season.championId || doneRounds === 0} onClick={() => { onSeason("crown"); flash("Champion crowned."); }}>
+            Crown the champion
+          </Button>
+          <Button small kind="quiet" disabled={!season.championId} onClick={() => { onSeason("next"); flash("Season " + (season.number + 1) + " has begun."); }}>
+            Start season {season.number + 1}
+          </Button>
+        </div>
+      </div>
+
+      <Rule />
+
+      <div style={{ padding: "22px 0" }}>
+        <Eyebrow>Live standings</Eyebrow>
+        {ranked.length === 0 ? (
+          <p style={{ fontFamily: UI, fontSize: 13.5, color: GRAPHITE, marginTop: 10 }}>No entries in this round yet.</p>
+        ) : (
+          <div style={{ marginTop: 10 }}>
+            {ranked.map((r, i) => (
+              <div key={r.entry.id} className="flex items-center justify-between" style={{ padding: "10px 0", borderBottom: "1px solid " + HAIR, gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 16 }}>{i + 1}. {r.entry.name}</div>
+                  <div style={{ marginTop: 2 }}><Eyebrow>{r.entry.playerName}</Eyebrow></div>
+                </div>
+                <div style={{ fontFamily: DISPLAY, fontSize: 18, color: SPOT }}>{r.votes}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <p style={{ fontFamily: UI, fontSize: 12.5, color: GRAPHITE, marginTop: 10 }}>
+          Remove an individual entry from the gallery screen.
+        </p>
+      </div>
+
+      <Rule />
+
+      <div style={{ padding: "22px 0 40px" }}>
+        <Eyebrow>Season data</Eyebrow>
+        <div className="flex flex-wrap" style={{ gap: 8, marginTop: 12 }}>
+          <Button small kind="quiet" onClick={exportJson}>Download backup</Button>
+          <Button small kind="quiet" onClick={() => fileRef.current && fileRef.current.click()}>Restore from file</Button>
+          <Button small kind="quiet" onClick={() => { if (window.confirm("Wipe every round, entry and vote, and start Season One again?")) onReset(); }}>
+            Reset season
+          </Button>
+        </div>
+        <input ref={fileRef} type="file" accept="application/json" onChange={importJson} style={{ display: "none" }} />
+        <p style={{ fontFamily: UI, fontSize: 12.5, color: GRAPHITE, marginTop: 14, lineHeight: 1.6, maxWidth: "50ch" }}>
+          {state.rounds.length} rounds, {liveEntries(state).length} looks, {liveVotes(state).length} votes,{" "}
+          {Object.keys(state.players).length} players on file.
+        </p>
+        {msg && <p style={{ fontFamily: UI, fontSize: 13, color: SPOT, marginTop: 12 }}>{msg}</p>}
+      </div>
+    </div>
+  );
+}
+
+function PinBoxes({ value, onChange, autoFocus }) {
+  return (
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+      inputMode="numeric"
+      autoComplete="off"
+      autoFocus={autoFocus}
+      placeholder="0000"
+      style={{
+        width: "100%", fontFamily: DISPLAY, fontSize: 44, letterSpacing: "0.4em",
+        padding: "10px 0", background: "transparent", border: "none",
+        borderBottom: "1px solid " + INK, outline: "none", marginTop: 6,
+      }}
+    />
+  );
+}
+
+function Gate({ onCreate, onReturn, error, busy, onClear }) {
+  const [mode, setMode] = useState("choose");
+  const [name, setName] = useState("");
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
+
+  const go = (m) => { onClear(); setMode(m); setPin(""); setPin2(""); };
+
+  return (
+    <div className="flex items-center justify-center" style={{ minHeight: "100vh", background: PAPER, padding: 24 }}>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{ fontFamily: DISPLAY, fontSize: 13, letterSpacing: "0.4em" }}>SEASON ONE</div>
+        <h1 style={{ fontFamily: DISPLAY, fontSize: "clamp(52px, 17vw, 88px)", lineHeight: 0.88, letterSpacing: "-0.03em", marginTop: 10, fontWeight: 500 }}>
+          Runway
+        </h1>
+
+        {mode === "choose" && (
+          <div>
+            <p style={{ fontFamily: DISPLAY, fontStyle: "italic", fontSize: 19, lineHeight: 1.5, marginTop: 18, maxWidth: "30ch" }}>
+              A new brief every week. One shared wardrobe, everyone in the same game, and the gallery decides.
+            </p>
+            <div style={{ marginTop: 34 }}>
+              <Button full onClick={() => go("create")}>I'm new here</Button>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <Button full kind="ghost" onClick={() => go("return")}>I have a pin</Button>
+            </div>
+          </div>
+        )}
+
+        {mode === "create" && (
+          <div>
+            <p style={{ fontFamily: UI, fontSize: 14, lineHeight: 1.6, color: GRAPHITE, marginTop: 18, maxWidth: "38ch" }}>
+              Pick a name and a four digit pin. The pin is how you get back to your looks, your wins and your model — on this phone or any other.
+            </p>
+            <div style={{ marginTop: 26 }}>
+              <Eyebrow>Your name</Eyebrow>
+              <input
+                value={name}
+                onChange={(e) => { onClear(); setName(e.target.value.slice(0, 28)); }}
+                placeholder="Your name"
+                style={{ width: "100%", fontFamily: DISPLAY, fontSize: 26, padding: "10px 0", background: "transparent", border: "none", borderBottom: "1px solid " + INK, outline: "none", marginTop: 6 }}
+              />
+            </div>
+            <div style={{ marginTop: 22 }}>
+              <Eyebrow>Choose a pin</Eyebrow>
+              <PinBoxes value={pin} onChange={(v) => { onClear(); setPin(v); }} />
+            </div>
+            <div style={{ marginTop: 18 }}>
+              <Eyebrow>Type it once more</Eyebrow>
+              <PinBoxes value={pin2} onChange={(v) => { onClear(); setPin2(v); }} />
+            </div>
+            {pin.length === 4 && pin2.length === 4 && pin !== pin2 && (
+              <p style={{ fontFamily: UI, fontSize: 13, color: SPOT, marginTop: 12 }}>Those two pins don't match.</p>
+            )}
+            {error && <p style={{ fontFamily: UI, fontSize: 13, color: SPOT, marginTop: 12 }}>{error}</p>}
+            <div style={{ marginTop: 22 }}>
+              <Button full disabled={busy || !name.trim() || pin.length !== 4 || pin !== pin2} onClick={() => onCreate(name.trim(), pin)}>
+                {busy ? "One moment" : "Save my pin and start"}
+              </Button>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <Button full kind="quiet" onClick={() => go("choose")}>Back</Button>
+            </div>
+            <p style={{ fontFamily: UI, fontSize: 12.5, color: GRAPHITE, marginTop: 16, lineHeight: 1.6 }}>
+              Write the pin down somewhere. Nobody can look it up for you.
+            </p>
+          </div>
+        )}
+
+        {mode === "return" && (
+          <div>
+            <p style={{ fontFamily: UI, fontSize: 14, lineHeight: 1.6, color: GRAPHITE, marginTop: 18, maxWidth: "38ch" }}>
+              Type the four digit pin you made and everything comes back.
+            </p>
+            <div style={{ marginTop: 26 }}>
+              <Eyebrow>Your pin</Eyebrow>
+              <PinBoxes value={pin} onChange={(v) => { onClear(); setPin(v); }} autoFocus />
+            </div>
+            {error && <p style={{ fontFamily: UI, fontSize: 13, color: SPOT, marginTop: 12 }}>{error}</p>}
+            <div style={{ marginTop: 22 }}>
+              <Button full disabled={busy || pin.length !== 4} onClick={() => onReturn(pin)}>
+                {busy ? "Looking" : "Let me in"}
+              </Button>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <Button full kind="quiet" onClick={() => go("choose")}>Back</Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   APP
+   ============================================================ */
+
+function App() {
+  const [state, setState] = useState(null);
+  const [me, setMe] = useState(null);
+  const [isHost, setIsHost] = useState(false);
+  const [tab, setTab] = useState("round");
+  const [now, setNow] = useState(Date.now());
+  const [ready, setReady] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [online, setOnline] = useState(false);
+  const [preset, setPreset] = useState(null);
+  const [gateError, setGateError] = useState(null);
+  const [gateBusy, setGateBusy] = useState(false);
+  const stateRef = useRef(null);
+  stateRef.current = state;
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // boot
+  useEffect(() => {
+    (async () => {
+      const params = new URLSearchParams(location.search);
+      if (params.get("host") === HOST_CODE) {
+        localStorage.setItem(HKEY, "1");
+        history.replaceState({}, "", location.pathname);
+      }
+      setIsHost(localStorage.getItem(HKEY) === "1");
+
+      const local = Sync.local();
+      const remote = await Sync.pull();
+      setOnline(Sync.online);
+
+      let s;
+      if (remote && local) s = mergeState(local, remote);
+      else s = remote || local || buildSeed();
+      setState(s);
+      Sync.push(s);
+
+      try {
+        const p = localStorage.getItem(PKEY);
+        if (p) setMe(JSON.parse(p));
+      } catch (e) {}
+      setReady(true);
+    })();
+  }, []);
+
+  // poll for other players
+  useEffect(() => {
+    const t = setInterval(async () => {
+      const remote = await Sync.pull();
+      setOnline(Sync.online);
+      if (!remote) return;
+      const merged = mergeState(stateRef.current, remote);
+      if (JSON.stringify(merged) !== JSON.stringify(stateRef.current)) setState(merged);
+    }, 6000);
+    return () => clearInterval(t);
+  }, []);
+
+  function save(next) {
+    setState(next);
+    Sync.push(next).then((merged) => {
+      if (merged && merged !== next) setState((cur) => mergeState(cur, merged));
+    });
+  }
+
+  useEffect(() => {
+    if (!state) return;
+    const next = autoFinalize(state, now);
+    if (next) save(next);
+  }, [state, Math.floor(now / 5000)]);
+
+  if (!ready) return <div className="boot">LOADING SEASON ONE</div>;
+
+  async function freshest() {
+    const remote = await Sync.pull();
+    setOnline(Sync.online);
+    return remote ? mergeState(stateRef.current, remote) : stateRef.current;
+  }
+
+  async function createPlayer(name, pin) {
+    setGateBusy(true);
+    const merged = await freshest();
+    setState(merged);
+    const taken = Object.keys(merged.players).some((k) => merged.players[k].pin === pin);
+    if (taken) {
+      setGateError("Someone already has the pin " + pin + ". Pick a different one.");
+      setGateBusy(false);
+      return;
+    }
+    const player = { id: "pin-" + pin, name, pin, model: Object.assign({}, DEFAULT_MODEL), joinedAt: Date.now(), updatedAt: Date.now() };
+    const next = Object.assign({}, merged, { players: Object.assign({}, merged.players, { [player.id]: player }) });
+    const written = await Sync.push(next);
+    setState(written || next);
+    const owner = (written || next).players[player.id];
+    if (owner && owner.pin === pin && owner.name !== name) {
+      setGateError("Someone claimed the pin " + pin + " a moment before you. Pick a different one.");
+      setGateBusy(false);
+      return;
+    }
+    localStorage.setItem(PKEY, JSON.stringify(player));
+    setMe(player);
+    setGateBusy(false);
+  }
+
+  async function signIn(pin) {
+    setGateBusy(true);
+    const merged = await freshest();
+    setState(merged);
+    const key = Object.keys(merged.players).find((k) => merged.players[k].pin === pin);
+    if (!key) {
+      setGateError("No player has the pin " + pin + " yet. Check the digits, or start as someone new.");
+      setGateBusy(false);
+      return;
+    }
+    const player = merged.players[key];
+    localStorage.setItem(PKEY, JSON.stringify(player));
+    setMe(player);
+    setGateBusy(false);
+  }
+
+  if (!me)
+    return (
+      <Gate
+        onCreate={createPlayer}
+        onReturn={signIn}
+        error={gateError}
+        busy={gateBusy}
+        onClear={() => gateError && setGateError(null)}
+      />
+    );
+
+  const round = currentRound(state);
+  const phase = phaseOf(round, now);
+
+  function saveModel(model) {
+    const player = Object.assign({}, me, { model: model, updatedAt: Date.now() });
+    setMe(player);
+    localStorage.setItem(PKEY, JSON.stringify(player));
+    return player;
+  }
+
+  function submitLook({ name, caption, items, colors, model }) {
+    const clean = {};
+    Object.keys(items).forEach((k) => { if (items[k]) clean[k] = items[k]; });
+    const tint = {};
+    Object.keys(colors || {}).forEach((k) => { if (clean[k]) tint[k] = colors[k]; });
+    const player = saveModel(model);
+    if (editing) {
+      const entries = state.entries.map((e) =>
+        e.id === editing.id
+          ? Object.assign({}, e, { name, caption, items: clean, colors: tint, model, updatedAt: Date.now() })
+          : e
+      );
+      save(Object.assign({}, state, {
+        entries,
+        players: Object.assign({}, state.players, { [me.id]: player }),
+      }));
+      setEditing(null);
+      return;
+    }
+    const entry = {
+      id: uid("e"),
+      roundId: round.id,
+      playerId: me.id,
+      playerName: me.name,
+      name, caption,
+      items: clean,
+      colors: tint,
+      model,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    save(Object.assign({}, state, {
+      entries: state.entries.concat([entry]),
+      players: Object.assign({}, state.players, { [me.id]: player }),
+    }));
+    setPreset(null);
+  }
+
+  function toggleVote(entryId, category) {
+    const target = state.entries.find((e) => e.id === entryId);
+    if (!target || target.playerId === me.id) return; // never your own look
+    const cat = category || "main";
+    const id = entryId + "|" + me.id + "|" + cat;
+    const existing = state.votes.find((v) => v.id === id);
+    const active = existing && !existing.removed;
+    if (!active && votesLeft(state, me.id, round.id, cat) === 0) return;
+    const weight = cat === "main" && advantageFor(state, me.id, round.number) === "double_vote" ? 2 : 1;
+    const vote = {
+      id, roundId: round.id, entryId, playerId: me.id, category: cat,
+      weight, at: Date.now(), removed: !!active,
+    };
+    save(Object.assign({}, state, { votes: state.votes.filter((v) => v.id !== id).concat([vote]) }));
+  }
+
+  function toggleReaction(entryId, emoji) {
+    const id = entryId + "|" + me.id + "|" + emoji;
+    const list = state.reactions || [];
+    const existing = list.find((r) => r.id === id);
+    const r = {
+      id, roundId: round.id, entryId, playerId: me.id, emoji,
+      at: Date.now(), removed: !!(existing && !existing.removed),
+    };
+    save(Object.assign({}, state, { reactions: list.filter((x) => x.id !== id).concat([r]) }));
+  }
+
+  function seasonAction(action, value) {
+    const season = Object.assign({ number: 1, target: SEASON_TARGET }, state.season || {});
+    if (action === "target") {
+      save(Object.assign({}, state, { season: Object.assign({}, season, { target: value, updatedAt: Date.now() }) }));
+      return;
+    }
+    if (action === "crown") {
+      const table = standings(state, season.number);
+      if (!table.length) return;
+      const champ = table[0];
+      save(Object.assign({}, state, {
+        season: Object.assign({}, season, {
+          championId: champ.playerId, championName: champ.name, endedAt: Date.now(), updatedAt: Date.now(),
+        }),
+      }));
+      return;
+    }
+    if (action === "next") {
+      const table = standings(state, season.number);
+      const champ = table[0];
+      const entry = {
+        id: "hof-" + season.number,
+        season: season.number,
+        championId: season.championId || (champ && champ.playerId) || null,
+        championName: season.championName || (champ && champ.name) || "Nobody",
+        points: champ ? champ.points : 0,
+        at: Date.now(),
+      };
+      save(Object.assign({}, state, {
+        halloffame: (state.halloffame || []).filter((h) => h.id !== entry.id).concat([entry]),
+        season: { number: season.number + 1, target: season.target, championId: null, championName: null, updatedAt: Date.now() },
+      }));
+      setTab("round");
+    }
+  }
+
+  function claimAdvantage(roundId, type, payload, winnerId) {
+    const rounds = state.rounds.map((r) =>
+      r.id === roundId
+        ? Object.assign({}, r, { advantage: { type, playerId: winnerId, claimedAt: Date.now(), payload: payload || null }, updatedAt: Date.now() })
+        : r
+    );
+    save(Object.assign({}, state, { rounds }));
+  }
+
+  function removeEntry(id) {
+    save(Object.assign({}, state, {
+      entries: state.entries.map((e) => (e.id === id ? Object.assign({}, e, { deleted: true, updatedAt: Date.now() }) : e)),
+    }));
+  }
+
+  function rename(name) {
+    const player = Object.assign({}, me, { name: name, updatedAt: Date.now() });
+    setMe(player);
+    localStorage.setItem(PKEY, JSON.stringify(player));
+    save(Object.assign({}, state, {
+      players: Object.assign({}, state.players, { [me.id]: player }),
+      entries: state.entries.map((e) => (e.playerId === me.id ? Object.assign({}, e, { playerName: name, updatedAt: Date.now() }) : e)),
+    }));
+  }
+
+  function patchRound(patch) {
+    const rounds = state.rounds.map((r) => (r.id === round.id ? Object.assign({}, r, patch, { updatedAt: Date.now() }) : r));
+    save(Object.assign({}, state, { rounds }));
+  }
+
+  function runRound(action) {
+    const t = Date.now();
+    if (action === "close-entries") {
+      const sunday = weekOf(t).voteClosesAt;
+      patchRound({
+        opensAt: Math.min(round.opensAt, t),
+        closesAt: t,
+        voteClosesAt: sunday > t + 3600000 ? sunday : t + DAY,
+      });
+      setTab("gallery");
+    }
+    if (action === "extend") {
+      patchRound(
+        phase === "voting"
+          ? { voteClosesAt: round.voteClosesAt + DAY }
+          : { closesAt: round.closesAt + DAY, voteClosesAt: round.voteClosesAt + DAY }
+      );
+    }
+    if (action === "close-voting") {
+      const ranked = rankEntries(state, round.id);
+      patchRound({ voteClosesAt: t, winnerEntryId: ranked.length ? ranked[0].entry.id : null });
+      setTab("results");
+    }
+    if (action === "next-round") {
+      const adv = round.advantage;
+      const themed = adv && adv.type === "theme_control" && adv.payload;
+      const early = adv && adv.type === "early_access";
+      const used = state.rounds.map((r) => r.theme);
+      const pool = THEME_POOL.filter((x) => used.indexOf(x) === -1);
+      const w = nextRoundWindow(t);
+      const opens = w.opensAt;
+      const next = {
+        id: uid("r"),
+        number: round.number + 1,
+        theme: themed || pool[0] || THEME_POOL[0],
+        brief: themed ? "Set by last week's winner. Interpret it however you like." : "Seven days. Five looks. Same wardrobe as everyone else.",
+        themeSetBy: themed ? adv.playerId : null,
+        previewAt: early ? opens - DAY : opens,
+        opensAt: early ? Math.max(opens, t + DAY) : opens,
+        closesAt: w.closesAt,
+        voteClosesAt: w.voteClosesAt,
+        winnerEntryId: null,
+        advantage: null,
+        seasonNumber: (state.season && state.season.number) || 1,
+        updatedAt: t,
+      };
+      save(Object.assign({}, state, { rounds: state.rounds.concat([next]) }));
+      setTab("round");
+    }
+  }
+
+  function resetSeason() {
+    const fresh = buildSeed();
+    if (state.players[me.id]) fresh.players[me.id] = state.players[me.id];
+    save(fresh);
+    setTab("round");
+  }
+
+  const tabs = [
+    ["round", "Round"],
+    ["studio", "Studio"],
+    ["gallery", "Gallery"],
+    ["results", "Results"],
+    ["profile", "You"],
+  ].concat(isHost ? [["host", "Host"]] : []);
+
+  const screen = {
+    round: <RoundHome state={state} me={me} now={now} isHost={isHost} go={(t) => { setEditing(null); setPreset(null); setTab(t); }} />,
+    studio: (
+      <Studio
+        key={editing ? editing.id : preset ? "remix-" + preset.id : "new"}
+        state={state} me={me} now={now} editing={editing} preset={preset}
+        onCancelEdit={() => { setEditing(null); setPreset(null); setTab("profile"); }}
+        onSubmit={submitLook}
+      />
+    ),
+    gallery: (
+      <Gallery
+        state={state} me={me} now={now}
+        onVote={toggleVote}
+        onReact={toggleReaction}
+        onRestyle={(e) => { setEditing(null); setPreset(e); setTab("studio"); }}
+        isHost={isHost} onRemove={removeEntry}
+      />
+    ),
+    results: (
+      <Results
+        state={state} me={me} now={now} onClaim={claimAdvantage} isHost={isHost}
+        onRestyle={(e) => { setEditing(null); setPreset(e); setTab("studio"); }}
+      />
+    ),
+    profile: (
+      <Profile
+        state={state} me={me} now={now}
+        onRename={rename} onDelete={removeEntry}
+        onEdit={(e) => { setPreset(null); setEditing(e); setTab("studio"); }}
+        isHost={isHost}
+        onHostIn={() => { localStorage.setItem(HKEY, "1"); setIsHost(true); setTab("host"); }}
+        onHostOut={() => { localStorage.removeItem(HKEY); setIsHost(false); setTab("round"); }}
+        onSignOut={() => { localStorage.removeItem(PKEY); setMe(null); setTab("round"); }}
+        onModel={(model) => {
+          const player = saveModel(model);
+          save(Object.assign({}, state, { players: Object.assign({}, state.players, { [me.id]: player }) }));
+        }}
+      />
+    ),
+    host: isHost ? (
+      <HostPanel
+        state={state} now={now} sync={online}
+        onRound={runRound} onPatch={patchRound} onReset={resetSeason} onSeason={seasonAction}
+        onImport={(s) => save(mergeState(null, s))}
+      />
+    ) : null,
+  }[tab];
+
+  return (
+    <div style={{ background: PAPER, color: INK, minHeight: "100vh" }}>
+      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 20px 120px" }}>
+        <header style={{ paddingTop: 22 }}>
+          <div className="flex items-baseline justify-between" style={{ gap: 16 }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 30, letterSpacing: "-0.01em", fontWeight: 600, lineHeight: 1 }}>Runway</div>
+            <div style={{ textAlign: "right" }}>
+              <Eyebrow color={isHost ? SPOT : GRAPHITE}>
+                {isHost ? "Host mode, " : "Season one, "}{PHASE_LABEL[phase].toLowerCase()}
+              </Eyebrow>
+              <div style={{ fontFamily: UI, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: online ? GRAPHITE : "#B4AFA5", marginTop: 3 }}>
+                {online ? "Shared" : "This device only"}
+              </div>
+            </div>
+          </div>
+          <div style={{ height: 2, background: INK, marginTop: 10 }} />
+          <div style={{ height: 1, background: INK, marginTop: 2 }} />
+
+          <nav className="hidden md:flex" style={{ gap: 26, padding: "12px 0", borderBottom: "1px solid " + HAIR }}>
+            {tabs.map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => { setEditing(null); setPreset(null); setTab(k); }}
+                style={{ fontFamily: UI, fontSize: 11.5, letterSpacing: "0.16em", textTransform: "uppercase", background: "none", border: "none", padding: "0 0 3px", cursor: "pointer", color: tab === k ? (k === "host" ? SPOT : INK) : GRAPHITE, borderBottom: "2px solid " + (tab === k ? (k === "host" ? SPOT : INK) : "transparent") }}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        </header>
+
+        <main>{screen}</main>
+
+        <footer style={{ marginTop: 60, paddingTop: 18, borderTop: "1px solid " + HAIR }}>
+          <Eyebrow>{liveEntries(state).length} looks across {state.rounds.length} rounds</Eyebrow>
+        </footer>
+      </div>
+
+      <nav className="flex md:hidden" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: PAPER, borderTop: "1px solid " + INK }}>
+        {tabs.map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => { setEditing(null); setPreset(null); setTab(k); }}
+            style={{
+              flex: 1,
+              padding: "14px 2px calc(14px + env(safe-area-inset-bottom))",
+              background: tab === k ? (k === "host" ? SPOT : INK) : "transparent",
+              color: tab === k ? "#fff" : k === "host" ? SPOT : GRAPHITE,
+              border: "none",
+              fontFamily: UI, fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer",
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

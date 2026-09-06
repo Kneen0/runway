@@ -1,0 +1,10 @@
+{
+  "name": "runway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A weekly outfit-design competition.",
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}
