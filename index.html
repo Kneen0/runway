@@ -70,7 +70,7 @@ const { useState, useEffect, useMemo, useRef, useId } = React;
    CONFIG — edit these two lines before you deploy
    ============================================================ */
 
-const HOST_CODE = "freddybear";        // the passphrase that unlocks host mode
+const HOST_CODE = "atelier";        // the passphrase that unlocks host mode
 const API = "/api/state";            // shared-state endpoint (Netlify function)
 
 /* ============================================================ */
@@ -851,10 +851,9 @@ EXTRA_ITEMS.forEach((i) => WARDROBE.push(i));
 
 /* pieces that arrive part way through the season */
 const DROPS = {
-  "p-cat": 2, "p-dog": 2, "p-bunny": 2, "p-bird": 2,
-  "t-babydoll": 3, "a-phone": 3, "s-mary": 3,
-  "b-flare": 4, "o-shearling": 4, "g-baguette": 4, "a-clip": 4,
-  "t-crop": 5, "b-cargoskirt": 5, "s-cowboy": 5, "a-watch": 5, "a-headband": 5,
+  "t-babydoll": 2, "a-phone": 2, "s-mary": 2,
+  "b-flare": 3, "o-shearling": 3, "g-baguette": 3, "a-clip": 3,
+  "t-crop": 4, "b-cargoskirt": 4, "s-cowboy": 4, "a-watch": 4, "a-headband": 4,
 };
 WARDROBE.forEach((i) => { if (DROPS[i.id]) i.dropRound = DROPS[i.id]; });
 
@@ -1688,76 +1687,42 @@ const SEED_COLORS = {
 };
 
 function buildSeed() {
-  const s = buildSeedRaw();
-  s.version = 2;
-  s.entries.forEach((e) => {
-    e.model = Object.assign({}, BOT_MODELS[e.playerId] || DEFAULT_MODEL);
-    e.colors = SEED_COLORS[e.id] || {};
-    if (SEED_EXTRAS[e.id]) Object.assign(e.items, SEED_EXTRAS[e.id]);
-  });
-  // Seed rows are stamped as old as possible so that anything a real player
-  // has actually done always beats the starter data during a merge.
-  s.rounds.forEach((r) => (r.updatedAt = r.number));
-  s.entries.forEach((e) => (e.updatedAt = 1));
-  Object.keys(s.players).forEach((k) => (s.players[k].updatedAt = 1));
-  s.votes.forEach((v) => {
-    v.category = "main";
-    v.id = v.entryId + "|" + v.playerId + "|main";
-    v.at = 1;
-  });
-  // put the three seeded rounds on the last three actual weeks
-  const weeks = [weekOf(Date.now() - 14 * DAY), weekOf(Date.now() - 7 * DAY), weekOf(Date.now())];
-  s.rounds.forEach((r, i) => {
-    const w = weeks[i];
-    r.previewAt = w.opensAt;
-    r.opensAt = w.opensAt;
-    r.closesAt = w.closesAt;
-    r.voteClosesAt = w.voteClosesAt;
-  });
-  s.rounds.forEach((r) => {
-    const mine = s.entries.filter((e) => e.roundId === r.id);
-    const span = r.closesAt - r.opensAt;
-    mine.forEach((e, i) => {
-      const when = r.opensAt + Math.round((span * (i + 1)) / (mine.length + 1));
-      e.createdAt = Math.min(when, Date.now() - 60000);
-    });
-  });
-  s.rounds.forEach((r) => (r.seasonNumber = 1));
-  s.season = { number: 1, target: SEASON_TARGET, updatedAt: 1 };
-  s.halloffame = [];
-  s.reactions = [];
-
-  // a few side awards already handed out in the finished rounds
-  const sideSeed = [
-    ["e1", "styling", 6], ["e3", "colour", 5], ["e5", "caption", 7],
-    ["e8", "styling", 9], ["e11", "colour", 6], ["e6", "pet", 8], ["e9", "caption", 5],
-  ];
-  sideSeed.forEach(([entryId, cat, n]) => {
-    const entry = s.entries.find((e) => e.id === entryId);
-    if (!entry) return;
-    for (let i = 0; i < n; i++) {
-      const pid = "crowd-" + (i + 1) + "-" + entry.roundId;
-      s.votes.push({
-        id: entryId + "|" + pid + "|" + cat,
-        roundId: entry.roundId, entryId: entryId, playerId: pid,
-        weight: 1, at: 1, category: cat,
-      });
-    }
-  });
-
-  // and some reactions on the live round so it isn't silent
-  const reactSeed = [["e12", 0, 5], ["e14", 2, 4], ["e15", 1, 6], ["e17", 4, 3], ["e13", 3, 2], ["e16", 0, 3]];
-  reactSeed.forEach(([entryId, emojiIdx, n]) => {
-    for (let i = 0; i < n; i++) {
-      const pid = "crowd-" + (i + 1) + "-react";
-      s.reactions.push({
-        id: entryId + "|" + pid + "|" + emojiIdx,
-        roundId: "r3", entryId: entryId, playerId: pid,
-        emoji: REACTIONS[emojiIdx], at: 1,
-      });
-    }
-  });
-  return s;
+  const now = Date.now();
+  // A brand new season should be playable the moment it is created, even if it
+  // starts mid-week or at the weekend: open now, close on the next Saturday
+  // that leaves a proper week to design in.
+  const w = nextRoundWindow(now);
+  // A minute in the past, so a phone whose clock runs slightly slow doesn't
+  // land in the "not open yet" preview state the instant a season is created.
+  const opensAt = Math.min(w.opensAt, now - 60000);
+  return {
+    version: 2,
+    epoch: now,
+    createdAt: now,
+    players: {},
+    rounds: [
+      {
+        id: "r1",
+        number: 1,
+        theme: "Rainy Day Chic",
+        brief: "It is going to rain all week. Look like you planned it.",
+        themeSetBy: null,
+        previewAt: opensAt,
+        opensAt: opensAt,
+        closesAt: w.closesAt,
+        voteClosesAt: w.voteClosesAt,
+        winnerEntryId: null,
+        advantage: null,
+        seasonNumber: 1,
+        updatedAt: 1,
+      },
+    ],
+    entries: [],
+    votes: [],
+    reactions: [],
+    season: { number: 1, target: SEASON_TARGET, updatedAt: 1 },
+    halloffame: [],
+  };
 }
 
 /* ============================================================
@@ -1786,7 +1751,13 @@ function mergePlayers(a, b) {
 function mergeState(a, b) {
   if (!a) return b;
   if (!b) return a;
+  // A reset starts a new epoch. Different epochs never merge — the newer one
+  // wins outright, so wiping the season can't be undone by a stale phone.
+  const ea = a.epoch || 0;
+  const eb = b.epoch || 0;
+  if (ea !== eb) return eb > ea ? b : a;
   return {
+    epoch: ea,
     version: 2,
     createdAt: Math.min(a.createdAt || Infinity, b.createdAt || Infinity),
     players: mergePlayers(a.players, b.players),
@@ -1834,6 +1805,21 @@ const Sync = {
       });
       try { localStorage.setItem(LKEY, JSON.stringify(merged)); } catch (e) {}
       return merged;
+    } catch (e) {
+      this.online = false;
+      return state;
+    }
+  },
+  async replace(state) {
+    try { localStorage.setItem(LKEY, JSON.stringify(state)); } catch (e) {}
+    if (!this.online) return state;
+    try {
+      await fetch(API, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(state),
+      });
+      return state;
     } catch (e) {
       this.online = false;
       return state;
@@ -4159,8 +4145,10 @@ function App() {
 
   function resetSeason() {
     const fresh = buildSeed();
+    fresh.epoch = Date.now();
     if (state.players[me.id]) fresh.players[me.id] = state.players[me.id];
-    save(fresh);
+    setState(fresh);
+    Sync.replace(fresh);
     setTab("round");
   }
 
