@@ -63,7 +63,10 @@ Every player styles a model, and every look remembers the model it was designed 
 - **hair** — twelve styles: long, bob, loose curls, tight curls, waves, pigtails, half up,
   ponytail, space buns, crop, braids, headscarf — in sixteen colours (four gingers, from
   copper through to auburn)
+- **parting** — middle, side left, side right, full fringe, curtain
 - **nails** — bare, nude, red, pink, black, blue, mint, gold
+- **glasses** — none, round, square, cat eye, readers (sunglasses are wardrobe items in the
+  accessory slot, so a model can wear prescription glasses *or* pick shades to style with)
 - **lips and cheeks** — bare, natural, bold, berry, gloss, glitter
 - **eyeliner** — none, thin, winged, sharp wing, smoky, graphic
 - **face** — glasses and freckles, on or off
@@ -79,7 +82,7 @@ for next time.
 ## The clothes
 
 Nine slots: top, bottom, outerwear, shoes, bag, accessory, **jewellery**, **legwear** and
-**pet**. Top, bottom and shoes are required; the rest are optional. **129 pieces**, including
+**pet**. Top, bottom and shoes are required; the rest are optional. **176 pieces**, including
 football shirts, dungarees, hoodies, cardigans, vests, denim skirts, gym kit (sports bras,
 leggings, running shorts and running shoes), knee-high boots, tights, slouch socks,
 legwarmers, necklaces, bangles, scarves, gloves, and bags from bucket to backpack to belt
@@ -87,6 +90,14 @@ bag — plus four pets (cat, dog, bunny, bird).
 
 Jewellery and legwear are their own slots, so a necklace doesn't compete with sunglasses and
 tights don't compete with a skirt.
+
+**Seasonal wardrobes.** Winter brings a fur-hood parka, snow puffer, ski jacket, snow
+trousers, snow and moon boots, bobble hat, ribbed beanie, earmuffs, ski goggles, mittens,
+snood, wool tights and ski socks. Summer has a bikini top, crochet top, linen shirt, denim
+cut-offs, printed sarong, linen midi, flip flops, espadrilles, straw sun hat, four styles of
+sunglasses, a striped beach bag and shell jewellery. Autumn has chunky knits, a mustard
+poloneck, plaid mini, cord midi, tweed blazer, quilted jacket, ankle boots, brogues, beret,
+tartan scarf, ribbed tights and a leather satchel.
 
 **Any item can be recoloured.** Tap the colour dot next to a chosen piece in the studio and
 pick from sixteen shades, or go back to *as made*. The recolour belongs to that look, not to

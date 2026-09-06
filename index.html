@@ -827,6 +827,60 @@ Object.assign(SHAPES, {
   },
 });
 
+/* ---- seasonal extras: flat tiles ---- */
+Object.assign(SHAPES, {
+  beanie: {
+    body: "M26,58 Q26,26 50,26 Q74,26 74,58 Z M20,58 L80,58 L80,72 L20,72 Z",
+    details: ({ ink, color }) => (
+      <>
+        <path d="M20,64 L80,64" fill="none" stroke={ink} strokeWidth="1" opacity="0.5" />
+        <circle cx="50" cy="20" r="7" fill={color} stroke={ink} strokeWidth="1.5" />
+      </>
+    ),
+  },
+  beret: {
+    body: "M22,58 Q22,30 50,30 Q78,30 78,58 Q50,68 22,58 Z",
+    details: ({ ink, color }) => (
+      <>
+        <path d="M22,58 Q50,66 78,58" fill="none" stroke={ink} strokeWidth="1.2" />
+        <path d="M50,30 L52,20" fill="none" stroke={ink} strokeWidth="2.4" strokeLinecap="round" />
+        <path d="M30,44 Q50,38 70,44" fill="none" stroke={ink} strokeWidth="0.9" opacity="0.45" />
+      </>
+    ),
+  },
+  earmuffs: {
+    body: "M18,50 Q18,34 30,34 Q42,34 42,50 Q42,66 30,66 Q18,66 18,50 Z M58,50 Q58,34 70,34 Q82,34 82,50 Q82,66 70,66 Q58,66 58,50 Z",
+    details: ({ ink }) => (
+      <>
+        <path d="M26,36 C30,10 70,10 74,36" fill="none" stroke={ink} strokeWidth="4" />
+        <path d="M26,50 Q30,44 34,50" fill="none" stroke={ink} strokeWidth="0.9" opacity="0.4" />
+        <path d="M66,50 Q70,44 74,50" fill="none" stroke={ink} strokeWidth="0.9" opacity="0.4" />
+      </>
+    ),
+  },
+  goggles: {
+    body: "M16,40 Q16,30 30,30 L70,30 Q84,30 84,40 L84,58 Q84,68 70,68 L30,68 Q16,68 16,58 Z",
+    details: ({ ink, accent }) => (
+      <>
+        <path d="M24,40 Q24,36 32,36 L68,36 Q76,36 76,40 L76,56 Q76,62 68,62 L32,62 Q24,62 24,56 Z" fill={accent} stroke={ink} strokeWidth="1.3" />
+        <path d="M16,44 L6,42 M84,44 L94,42" fill="none" stroke={ink} strokeWidth="4" />
+      </>
+    ),
+  },
+  snowBoot: {
+    body: "M30,26 L64,26 L64,60 L84,66 Q92,68 92,78 L92,86 L28,86 L26,60 Z",
+    details: ({ ink, color }) => (
+      <>
+        <path d="M28,26 L66,26 L66,38 L28,38 Z" fill={color} stroke={ink} strokeWidth="1.5" />
+        <path d="M28,32 Q47,38 66,32" fill="none" stroke={ink} strokeWidth="1" opacity="0.45" />
+        <path d="M28,78 L92,79" fill="none" stroke={ink} strokeWidth="1.4" />
+        <path d="M34,66 L58,66" fill="none" stroke={ink} strokeWidth="1" opacity="0.5" />
+      </>
+    ),
+  },
+});
+
+
 /* ============================================================
    WARDROBE — 40 staples + 6 archive pieces
    ============================================================ */
@@ -1111,6 +1165,63 @@ const WIDER_ITEMS = [
 ];
 WIDER_ITEMS.forEach((i) => WARDROBE.push(i));
 
+/* ---- seasons ---- */
+const SEASON_ITEMS = [
+  // WINTER
+  { id: "t-fairisle", name: "Fair isle jumper", slot: "top", shape: "knit", color: "#EDE4D2", accent: "#8C3A2E", pattern: "check", note: "Snowflake knit" },
+  { id: "t-thermal", name: "Thermal top", slot: "top", shape: "longsleeve", color: "#C9CDD4", note: "Base layer" },
+  { id: "t-rollneck", name: "Cable rollneck", slot: "top", shape: "turtleneck", color: "#F0EBE0", note: "Aran cable" },
+  { id: "o-parka", name: "Fur-hood parka", slot: "outerwear", shape: "trench", color: "#5E6B4F", accent: "#C6B394", note: "Storm proof" },
+  { id: "o-snowpuffer", name: "Snow puffer", slot: "outerwear", shape: "puffer", color: "#F2F4F6", note: "Marshmallow" },
+  { id: "o-skijacket", name: "Ski jacket", slot: "outerwear", shape: "jacket", color: "#1F5B8C", accent: "#F2C14E", pattern: "stripe", note: "Piste ready" },
+  { id: "b-snowpant", name: "Snow trousers", slot: "bottom", shape: "cargo", color: "#2B3440", note: "Waterproof" },
+  { id: "b-thermalegs", name: "Thermal leggings", slot: "bottom", shape: "leggings", color: "#3A3F49", note: "Under everything" },
+  { id: "s-snowboot", name: "Snow boots", slot: "shoes", shape: "snowBoot", color: "#2B3440", accent: "#F2EDE4", note: "Fur cuff" },
+  { id: "s-moonboot", name: "Moon boots", slot: "shoes", shape: "snowBoot", color: "#F2F4F6", accent: "#9AC4D8", note: "Enormous" },
+  { id: "a-beanie", name: "Bobble hat", slot: "accessory", shape: "beanie", color: "#B23A48", note: "With a bobble" },
+  { id: "a-beanie2", name: "Ribbed beanie", slot: "accessory", shape: "beanie", color: "#2E3A4A", note: "Pulled low" },
+  { id: "a-earmuffs", name: "Fluffy earmuffs", slot: "accessory", shape: "earmuffs", color: "#E8C9D4", note: "Very warm" },
+  { id: "a-goggles", name: "Ski goggles", slot: "accessory", shape: "goggles", color: "#1F2933", accent: "#9AC4D8", note: "Mirrored" },
+  { id: "a-mittens", name: "Woolly mittens", slot: "accessory", shape: "gloves", color: "#C1272D", note: "On a string" },
+  { id: "a-snood", name: "Fleece snood", slot: "accessory", shape: "scarf", color: "#6E7D5B", note: "Over the chin" },
+  { id: "l-wooltights", name: "Wool tights", slot: "legwear", shape: "tights", color: "#D9CDB8", note: "Thick knit" },
+  { id: "l-skisocks", name: "Ski socks", slot: "legwear", shape: "socks", color: "#F0EBE0", accent: "#B23A48", pattern: "stripe", note: "Up to the knee" },
+
+  // SUMMER
+  { id: "t-bikini", name: "Bikini top", slot: "top", shape: "sportsBra", color: "#F2C14E", note: "Beach ready" },
+  { id: "t-crochet", name: "Crochet top", slot: "top", shape: "tank", color: "#F4EDE0", accent: "#C9A46A", pattern: "dot", note: "Handmade" },
+  { id: "t-camisole", name: "Silk camisole", slot: "top", shape: "tank", color: "#D9C4E8", note: "Bias cut" },
+  { id: "t-linenshirt", name: "Linen shirt", slot: "top", shape: "oxford", color: "#F4F1E6", note: "Rolled sleeves" },
+  { id: "b-denimshorts", name: "Denim cut-offs", slot: "bottom", shape: "shorts", color: "#7E9AC0", note: "Frayed hem" },
+  { id: "b-sarong", name: "Printed sarong", slot: "bottom", shape: "slipSkirt", color: "#3C9C8F", accent: "#F2C14E", pattern: "dot", note: "Beach cover up" },
+  { id: "b-linenskirt", name: "Linen midi", slot: "bottom", shape: "midiSkirt", color: "#F4F1E6", note: "Sea breeze" },
+  { id: "s-flipflop", name: "Flip flops", slot: "shoes", shape: "sandal", color: "#E86A5C", note: "Pool side" },
+  { id: "s-espadrille", name: "Espadrilles", slot: "shoes", shape: "flat", color: "#EDE0C4", accent: "#C9A46A", note: "Rope sole" },
+  { id: "a-sunhat", name: "Straw sun hat", slot: "accessory", shape: "hat", color: "#E0C68A", note: "Wide brim" },
+  { id: "a-aviators", name: "Aviator sunglasses", slot: "accessory", shape: "sunglasses", color: "#C0982F", note: "Gold frame" },
+  { id: "a-roundshades", name: "Round sunglasses", slot: "accessory", shape: "sunglasses", color: "#6E4B6B", note: "Tinted lilac" },
+  { id: "a-sportshades", name: "Sport sunglasses", slot: "accessory", shape: "sunglasses", color: "#1F5B8C", note: "Wraparound" },
+  { id: "g-beachbag", name: "Striped beach bag", slot: "bag", shape: "tote", color: "#F4F1E6", accent: "#1F5B8C", pattern: "stripe", note: "Towel inside" },
+  { id: "j-shell", name: "Shell necklace", slot: "jewellery", shape: "necklace", color: "#F2EDE4", note: "From the beach" },
+  { id: "j-anklet", name: "Beaded bracelet", slot: "jewellery", shape: "bracelet", color: "#3C9C8F", note: "Holiday souvenir" },
+
+  // AUTUMN
+  { id: "t-chunkyknit", name: "Chunky knit", slot: "top", shape: "knit", color: "#A85A2E", note: "Sleeves too long" },
+  { id: "t-poloneck", name: "Mustard poloneck", slot: "top", shape: "turtleneck", color: "#C79A2E", note: "Merino" },
+  { id: "b-plaidskirt", name: "Plaid mini", slot: "bottom", shape: "miniSkirt", color: "#8C4A2E", accent: "#2B2A26", pattern: "check", note: "Kilt pin" },
+  { id: "b-cordskirt", name: "Cord midi", slot: "bottom", shape: "midiSkirt", color: "#7A5230", note: "Buttons all the way" },
+  { id: "o-tweed", name: "Tweed blazer", slot: "outerwear", shape: "blazer", color: "#8A7A5C", accent: "#4A3E2E", pattern: "check", note: "Elbow patches" },
+  { id: "o-quilted", name: "Quilted jacket", slot: "outerwear", shape: "puffer", color: "#4A5A3E", note: "Country lanes" },
+  { id: "o-tanktrench", name: "Short trench", slot: "outerwear", shape: "jacket", color: "#C6B394", note: "Belted" },
+  { id: "s-ankleboot", name: "Tan ankle boot", slot: "shoes", shape: "chelsea", color: "#9B6B3F", note: "Stacked heel" },
+  { id: "s-brogue", name: "Oxblood brogue", slot: "shoes", shape: "flat", color: "#6E2434", note: "Punched detail" },
+  { id: "a-beret", name: "Wool beret", slot: "accessory", shape: "beret", color: "#7A2E3B", note: "Tilted" },
+  { id: "a-tartanscarf", name: "Tartan scarf", slot: "accessory", shape: "scarf", color: "#8C3A2E", accent: "#2B2A26", pattern: "check", note: "Wrapped twice" },
+  { id: "l-ribbedtights", name: "Ribbed tights", slot: "legwear", shape: "tights", color: "#8C4A2E", note: "Autumn rust" },
+  { id: "g-satchel", name: "Leather satchel", slot: "bag", shape: "topHandle", color: "#8A6849", note: "Buckles" },
+];
+SEASON_ITEMS.forEach((i) => WARDROBE.push(i));
+
 /* pieces that arrive part way through the season */
 const DROPS = {
   "t-hoodie": 2, "b-tennis": 2, "s-chunky": 2, "a-bow": 2,
@@ -1207,10 +1318,27 @@ const DEFAULT_MODEL = {
   height: "average",
   pose: "front",
   eyeliner: "thin",
-  glasses: false,
+  glasses: "none",
   freckles: false,
   nails: "none",
+  parting: "middle",
 };
+
+const PARTINGS = [
+  { id: "middle", name: "Middle" },
+  { id: "left", name: "Side (left)" },
+  { id: "right", name: "Side (right)" },
+  { id: "fringe", name: "Full fringe" },
+  { id: "curtain", name: "Curtain" },
+];
+
+const GLASSES = [
+  { id: "none", name: "None" },
+  { id: "round", name: "Round" },
+  { id: "square", name: "Square" },
+  { id: "cateye", name: "Cat eye" },
+  { id: "reading", name: "Readers" },
+];
 
 const NAILS = [
   { id: "none", name: "Bare", color: null },
@@ -1760,6 +1888,49 @@ Object.assign(WORN, {
   ),
 });
 
+/* ---- seasonal extras: worn ---- */
+Object.assign(WORN, {
+  beanie: (p) => (
+    <g>
+      <Piece {...p} d="M41,22 Q41,0 60,0 Q79,0 79,22 Z" />
+      <Piece {...p} d="M39,20 L81,20 L81,29 L39,29 Z" sw={1.4} />
+      <circle cx="60" cy="-3" r="4.4" fill={p.color} stroke={INK} strokeWidth="1.3" />
+    </g>
+  ),
+  beret: (p) => (
+    <g>
+      <Piece {...p} d="M38,20 Q38,2 60,2 Q84,2 84,18 Q84,26 60,27 Q40,27 38,20 Z" />
+      {line("M38,20 Q60,27 84,18", 1.1, 0.6)}
+      <circle cx="61" cy="2" r="2" fill={p.color} stroke={INK} strokeWidth="1.1" />
+    </g>
+  ),
+  earmuffs: (p) => (
+    <g>
+      <path d="M44,14 C46,-2 74,-2 76,14" fill="none" stroke={p.color} strokeWidth="4.4" />
+      <path d="M44,14 C46,-2 74,-2 76,14" fill="none" stroke={INK} strokeWidth="1" opacity="0.5" />
+      <Piece {...p} d="M36,30 Q36,22 43,22 Q50,22 50,30 Q50,39 43,39 Q36,39 36,30 Z" sw={1.4} />
+      <Piece {...p} d="M70,30 Q70,22 77,22 Q84,22 84,30 Q84,39 77,39 Q70,39 70,30 Z" sw={1.4} />
+    </g>
+  ),
+  goggles: (p) => (
+    <g>
+      <Piece {...p} d="M42,24 Q42,19 49,19 L71,19 Q78,19 78,24 L78,34 Q78,40 71,40 L49,40 Q42,40 42,34 Z" sw={1.4} />
+      <path d="M46,24 Q46,22 51,22 L69,22 Q74,22 74,24 L74,34 Q74,37 69,37 L51,37 Q46,37 46,24 Z" fill={p.accent || "#9AC4D8"} stroke={INK} strokeWidth="1" />
+      <path d="M42,27 L38,26 M78,27 L82,26" fill="none" stroke={INK} strokeWidth="3" />
+    </g>
+  ),
+  snowBoot: (p) => (
+    <g>
+      <Piece {...p} d="M42,196 L59,196 C59,216 59,230 60,238 Q52,247 40,245 C40,226 41,210 42,196 Z" />
+      <Piece {...p} d="M61,196 L78,196 C79,210 80,226 80,245 Q68,247 60,238 C60,230 61,216 61,196 Z" />
+      <Piece {...p} color={p.accent || "#F2EDE4"} d="M41,192 L60,192 L60,204 L41,204 Z" sw={1.3} />
+      <Piece {...p} color={p.accent || "#F2EDE4"} d="M60,192 L79,192 L79,204 L60,204 Z" sw={1.3} />
+      {line("M40,240 L60,238", 1.4)}
+      {line("M60,238 L80,240", 1.4)}
+    </g>
+  ),
+});
+
 /* the bib and straps go over whatever top is worn underneath */
 const BIB = {
   dungarees: (p) => (
@@ -1866,7 +2037,7 @@ function HairBack({ style, color }) {
   return <path {...P} d="M39,28 C39,5 81,5 81,28 C81,38 80,42 79,46 L73,42 C75,36 75,32 73,29 L47,29 C45,32 45,36 47,42 L41,46 C40,42 39,38 39,30 Z" />;
 }
 
-function HairFront({ style, color }) {
+function HairFront({ style, color, parting }) {
   const P = { fill: color, stroke: INK, strokeWidth: 1.4, strokeLinejoin: "round" };
   if (style === "scarf")
     return (
@@ -1887,11 +2058,44 @@ function HairFront({ style, color }) {
     return <path {...P} d="M40,32 C38,8 49,3 60,3 C71,3 82,8 80,32 C77,24 71,20 60,20 C49,20 43,24 40,32 Z" />;
   if (style === "curls")
     return <path {...P} d="M41,30 C39,12 50,5 60,5 C70,5 81,12 79,30 C76,23 70,20 60,20 C50,20 44,23 41,30 Z" />;
+  const part = parting || "middle";
+  if (part === "fringe")
+    return (
+      <g>
+        <path {...P} d="M39,36 C37,10 49,3 60,3 C71,3 83,10 81,36 C80,29 78,25 74,25 L46,25 C42,25 40,29 39,36 Z" />
+        <path d="M50,24 L49,10 M60,24 L60,9 M70,24 L71,10" fill="none" stroke={INK} strokeWidth="0.7" opacity="0.3" />
+      </g>
+    );
+  if (part === "left")
+    return (
+      <g>
+        <path {...P} d="M39,36 C37,10 49,3 60,3 C71,3 83,10 81,36 C79,25 74,19 64,19 C57,19 53,21 51,8 C48,15 44,25 39,36 Z" />
+        <path d="M51,9 C55,16 62,20 70,21" fill="none" stroke={INK} strokeWidth="0.8" opacity="0.35" />
+      </g>
+    );
+  if (part === "right")
+    return (
+      <g>
+        <path {...P} d="M39,36 C37,10 49,3 60,3 C71,3 83,10 81,36 C76,25 72,15 69,8 C67,21 63,19 56,19 C46,19 41,25 39,36 Z" />
+        <path d="M69,9 C65,16 58,20 50,21" fill="none" stroke={INK} strokeWidth="0.8" opacity="0.35" />
+      </g>
+    );
+  if (part === "curtain")
+    return (
+      <g>
+        <path {...P} d="M39,36 C37,10 49,3 60,3 C71,3 83,10 81,36 C78,24 74,16 68,14 C64,20 60,10 60,10 C60,10 56,20 52,14 C46,16 42,24 39,36 Z" />
+        <path d="M60,10 L60,20" fill="none" stroke={INK} strokeWidth="0.7" opacity="0.35" />
+      </g>
+    );
+  // middle
   return (
-    <path
-      {...P}
-      d="M39,36 C37,10 49,3 60,3 C71,3 83,10 81,36 C79,26 76,21 68,20 C62,19 52,21 47,24 C43,26 41,30 39,36 Z"
-    />
+    <g>
+      <path
+        {...P}
+        d="M39,36 C37,10 49,3 60,3 C71,3 83,10 81,36 C79,26 74,20 66,19 C62,18 60,8 60,8 C60,8 58,18 54,19 C46,20 41,26 39,36 Z"
+      />
+      <path d="M60,8 L60,18" fill="none" stroke={INK} strokeWidth="0.7" opacity="0.35" />
+    </g>
   );
 }
 
@@ -1982,13 +2186,36 @@ function Face({ makeup, eyeliner, glasses, freckles }) {
           ))}
         </g>
       )}
-      {glasses && (
-        <g fill="none" stroke={INK} strokeWidth="1.4">
-          <rect x="46" y="25" width="14" height="11" rx="3.5" />
-          <rect x="60" y="25" width="14" height="11" rx="3.5" />
-          <path d="M60,29 L60,29" />
-          <path d="M46,29 L41,28" />
-          <path d="M74,29 L79,28" />
+      {glasses && glasses !== "none" && glasses !== false && (
+        <g fill="none" stroke={INK} strokeWidth={glasses === "reading" ? 1.1 : 1.4}>
+          {(glasses === "round" || glasses === true) && (
+            <>
+              <circle cx="53" cy="30" r="6.2" />
+              <circle cx="67" cy="30" r="6.2" />
+            </>
+          )}
+          {glasses === "square" && (
+            <>
+              <rect x="46.5" y="24.6" width="13" height="10.6" rx="2" />
+              <rect x="60.5" y="24.6" width="13" height="10.6" rx="2" />
+            </>
+          )}
+          {glasses === "cateye" && (
+            <>
+              <path d="M46,27 Q46,24.4 52,24.4 Q59,24.4 59.4,29 Q59.6,35 53,35 Q46,35 46,27 Z" />
+              <path d="M74,27 Q74,24.4 68,24.4 Q61,24.4 60.6,29 Q60.4,35 67,35 Q74,35 74,27 Z" />
+              <path d="M46,25.6 L42.4,22.6 M74,25.6 L77.6,22.6" />
+            </>
+          )}
+          {glasses === "reading" && (
+            <>
+              <rect x="47" y="26.4" width="12" height="8.4" rx="4" />
+              <rect x="61" y="26.4" width="12" height="8.4" rx="4" />
+            </>
+          )}
+          <path d={glasses === "round" || glasses === true ? "M59.2,30 L60.8,30" : "M59,29.4 L61,29.4"} />
+          <path d="M46,28.6 L41,27.6" />
+          <path d="M74,28.6 L79,27.6" />
         </g>
       )}
     </g>
@@ -2082,7 +2309,7 @@ function Model({ model, items, colors, style, className }) {
             <path {...shade} d="M45,31 C43,31 42,33 43,35 C43,37 45,38 46,37" />
             <path {...shade} d="M75,31 C77,31 78,33 77,35 C77,37 75,38 74,37" />
             <Face makeup={m.makeup} eyeliner={m.eyeliner} glasses={m.glasses} freckles={m.freckles} />
-            <HairFront style={m.hair} color={m.hairColor} />
+            <HairFront style={m.hair} color={m.hairColor} parting={m.parting} />
 
             {/* clothes */}
             {piece("legwear")}
@@ -2848,6 +3075,11 @@ function ModelEditor({ model, onChange }) {
           <Chip key={h.id} on={m.hair === h.id} onClick={() => set("hair", h.id)}>{h.name}</Chip>
         ))}
       </Row>
+      <Row label="Parting">
+        {PARTINGS.map((k) => (
+          <Chip key={k.id} on={(m.parting || "middle") === k.id} onClick={() => set("parting", k.id)}>{k.name}</Chip>
+        ))}
+      </Row>
       <Row label="Hair colour">
         {HAIR_COLORS.map((c) => (
           <Swatch key={c} color={c} on={m.hairColor === c} onClick={() => set("hairColor", c)} />
@@ -2882,8 +3114,18 @@ function ModelEditor({ model, onChange }) {
           )
         )}
       </Row>
+      <Row label="Glasses">
+        {GLASSES.map((g) => (
+          <Chip
+            key={g.id}
+            on={(m.glasses === true ? "round" : m.glasses || "none") === g.id}
+            onClick={() => set("glasses", g.id)}
+          >
+            {g.name}
+          </Chip>
+        ))}
+      </Row>
       <Row label="Face">
-        <Chip on={!!m.glasses} onClick={() => set("glasses", !m.glasses)}>Glasses</Chip>
         <Chip on={!!m.freckles} onClick={() => set("freckles", !m.freckles)}>Freckles</Chip>
       </Row>
     </div>
