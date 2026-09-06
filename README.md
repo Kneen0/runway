@@ -60,8 +60,10 @@ device*.
 Every player styles a model, and every look remembers the model it was designed on:
 
 - **skin** — six tones
-- **hair** — eight styles including braids and a headscarf, in sixteen colours
-  (four gingers, from copper through to auburn)
+- **hair** — twelve styles: long, bob, loose curls, tight curls, waves, pigtails, half up,
+  ponytail, space buns, crop, braids, headscarf — in sixteen colours (four gingers, from
+  copper through to auburn)
+- **nails** — bare, nude, red, pink, black, blue, mint, gold
 - **lips and cheeks** — bare, natural, bold, berry, gloss, glitter
 - **eyeliner** — none, thin, winged, sharp wing, smoky, graphic
 - **face** — glasses and freckles, on or off
@@ -76,10 +78,15 @@ for next time.
 
 ## The clothes
 
-Seven slots: top, bottom, outerwear, shoes, bag, accessory and **pet**. Top, bottom and
-shoes are required; the rest are optional. Eighty-four pieces, including the baby doll top,
-flared jeans, cargo mini, mary janes, cowboy boots, baguette bag, phone on a strap, pearl
-clips, chunky watch, padded headband, and four pets (cat, dog, bunny, bird).
+Nine slots: top, bottom, outerwear, shoes, bag, accessory, **jewellery**, **legwear** and
+**pet**. Top, bottom and shoes are required; the rest are optional. **129 pieces**, including
+football shirts, dungarees, hoodies, cardigans, vests, denim skirts, gym kit (sports bras,
+leggings, running shorts and running shoes), knee-high boots, tights, slouch socks,
+legwarmers, necklaces, bangles, scarves, gloves, and bags from bucket to backpack to belt
+bag — plus four pets (cat, dog, bunny, bird).
+
+Jewellery and legwear are their own slots, so a necklace doesn't compete with sunglasses and
+tights don't compete with a skirt.
 
 **Any item can be recoloured.** Tap the colour dot next to a chosen piece in the studio and
 pick from sixteen shades, or go back to *as made*. The recolour belongs to that look, not to
