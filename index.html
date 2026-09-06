@@ -849,8 +849,42 @@ const EXTRA_ITEMS = [
 ];
 EXTRA_ITEMS.forEach((i) => WARDROBE.push(i));
 
+/* second drop of pieces */
+const MORE_ITEMS = [
+  { id: "t-polo", name: "Ribbed polo", slot: "top", shape: "oxford", color: "#E8E2D4", note: "Cotton rib" },
+  { id: "t-hoodie", name: "Cropped hoodie", slot: "top", shape: "knit", color: "#C4C8D4", note: "Brushed back" },
+  { id: "t-mesh", name: "Mesh long sleeve", slot: "top", shape: "longsleeve", color: "#2A2A30", accent: "#6E6E7A", pattern: "dot", note: "Sheer" },
+  { id: "t-gingham", name: "Gingham blouse", slot: "top", shape: "blouse", color: "#F4F1E8", accent: "#B23A48", pattern: "check", note: "Picnic energy" },
+
+  { id: "b-tennis", name: "Tennis skirt", slot: "bottom", shape: "miniSkirt", color: "#F4F2EC", pattern: "pleat", note: "Box pleats" },
+  { id: "b-cord", name: "Corduroy flares", slot: "bottom", shape: "wideleg", color: "#A8632F", note: "Wide wale" },
+  { id: "b-track", name: "Track pant", slot: "bottom", shape: "pants", color: "#2E3A4A", accent: "#F4F2EC", pattern: "stripe", note: "Side stripe" },
+  { id: "b-denimini", name: "Denim mini", slot: "bottom", shape: "miniSkirt", color: "#6C8CB5", note: "Raw hem" },
+  { id: "b-culotte", name: "Culottes", slot: "bottom", shape: "shorts", color: "#3F4A44", note: "Cropped wide" },
+
+  { id: "o-varsity", name: "Varsity jacket", slot: "outerwear", shape: "jacket", color: "#2B3A55", accent: "#E8E2D4", note: "Wool and leather" },
+  { id: "o-gilet", name: "Quilted gilet", slot: "outerwear", shape: "puffer", color: "#4C5A3E", note: "Countryside" },
+  { id: "o-cape", name: "Cape coat", slot: "outerwear", shape: "duster", color: "#7A2E3B", note: "Dramatic" },
+  { id: "o-cardi", name: "Grandad cardigan", slot: "outerwear", shape: "jacket", color: "#B8A277", note: "Chunky knit" },
+
+  { id: "s-chunky", name: "Chunky trainer", slot: "shoes", shape: "sneaker", color: "#EDE9E1", accent: "#9AA0AC", note: "Big sole" },
+  { id: "s-knee", name: "Knee boot", slot: "shoes", shape: "rainboot", color: "#3A2A24", note: "Riding style" },
+  { id: "s-mule", name: "Kitten mule", slot: "shoes", shape: "heel", color: "#E7D9C8", note: "Backless" },
+
+  { id: "g-backpack", name: "Mini backpack", slot: "bag", shape: "tote", color: "#3D5A4A", note: "Two straps" },
+  { id: "g-basket", name: "Woven basket", slot: "bag", shape: "tote", color: "#C9A46A", accent: "#A07C42", pattern: "check", note: "Straw" },
+
+  { id: "a-cateye", name: "Cat-eye sunglasses", slot: "accessory", shape: "sunglasses", color: "#2B2A33", note: "Very Riviera" },
+  { id: "a-bow", name: "Ribbon bow", slot: "accessory", shape: "headband", color: "#D96A9A", note: "Big satin bow" },
+];
+MORE_ITEMS.forEach((i) => WARDROBE.push(i));
+
 /* pieces that arrive part way through the season */
 const DROPS = {
+  "t-hoodie": 2, "b-tennis": 2, "s-chunky": 2, "a-bow": 2,
+  "t-gingham": 3, "b-cord": 3, "o-varsity": 3, "g-basket": 3,
+  "t-mesh": 4, "b-track": 4, "o-cape": 4, "s-knee": 4, "a-cateye": 4,
+  "t-polo": 5, "b-denimini": 5, "b-culotte": 5, "o-gilet": 5, "o-cardi": 5, "s-mule": 5, "g-backpack": 5,
   "t-babydoll": 2, "a-phone": 2, "s-mary": 2,
   "b-flare": 3, "o-shearling": 3, "g-baguette": 3, "a-clip": 3,
   "t-crop": 4, "b-cargoskirt": 4, "s-cowboy": 4, "a-watch": 4, "a-headband": 4,
@@ -884,16 +918,28 @@ const HAIR_STYLES = [
 ];
 
 const HAIR_COLORS = [
-  "#191310", "#4A2C18", "#8A5A2B", "#C69433", "#E4DACB",
-  "#B23A48", "#8E5FA8", "#3E7FA8", "#D96A9A", "#4C7A5A",
+  "#191310", "#3B2416", "#6B4423", "#8A5A2B", "#B07A3C",
+  "#C69433", "#E2C98A", "#E8DFD0",
+  "#B5561D", "#D2712C", "#E0894A", "#9C3B14",
+  "#8E5FA8", "#3E7FA8", "#D96A9A", "#4C7A5A",
 ];
 
 const MAKEUPS = [
   { id: "bare", name: "Bare" },
   { id: "natural", name: "Natural" },
   { id: "bold", name: "Bold lip" },
-  { id: "liner", name: "Graphic liner" },
+  { id: "berry", name: "Berry" },
+  { id: "gloss", name: "Gloss" },
   { id: "glitter", name: "Glitter" },
+];
+
+const EYELINERS = [
+  { id: "none", name: "None" },
+  { id: "thin", name: "Thin" },
+  { id: "winged", name: "Winged" },
+  { id: "sharp", name: "Sharp wing" },
+  { id: "smoky", name: "Smoky" },
+  { id: "graphic", name: "Graphic" },
 ];
 
 const HEIGHTS = [
@@ -903,12 +949,12 @@ const HEIGHTS = [
 ];
 
 const POSES = [
-  { id: "front", name: "Straight on", t: "" },
-  { id: "hip", name: "Hip out", t: "rotate(-3 60 240) skewX(2)" },
-  { id: "lean", name: "Lean", t: "rotate(4 60 240)" },
-  { id: "turn", name: "Three quarter", t: "translate(60 0) scale(0.9 1) translate(-60 0)" },
-  { id: "sway", name: "Sway", t: "rotate(-6 60 250)" },
-  { id: "step", name: "Mid step", t: "translate(60 0) scale(0.96 1) translate(-60 0) rotate(3 60 250)" },
+  { id: "front", name: "Straight on", aL: 0, aR: 0, tilt: 0, sx: 1 },
+  { id: "hip", name: "Hip out", aL: 9, aR: -3, tilt: -2, sx: 1 },
+  { id: "open", name: "Arms out", aL: 16, aR: -16, tilt: 0, sx: 1 },
+  { id: "wave", name: "Wave", aL: 4, aR: -26, tilt: 1, sx: 1 },
+  { id: "walk", name: "Mid step", aL: -8, aR: 10, tilt: 2, sx: 1 },
+  { id: "turn", name: "Three quarter", aL: 6, aR: -6, tilt: -1, sx: 0.92 },
 ];
 
 const RECOLOURS = [
@@ -924,13 +970,16 @@ const DEFAULT_MODEL = {
   makeup: "natural",
   height: "average",
   pose: "front",
+  eyeliner: "thin",
   glasses: false,
   freckles: false,
 };
 
 const skinOf = (m) => (SKINS.find((s) => s.id === (m && m.skin)) || SKINS[1]).color;
 const heightOf = (m) => (HEIGHTS.find((h) => h.id === (m && m.height)) || HEIGHTS[1]).scale;
-const poseOf = (m) => (POSES.find((p) => p.id === (m && m.pose)) || POSES[0]).t;
+const poseOf = (m) => POSES.find((p) => p.id === (m && m.pose)) || POSES[0];
+const ROT_L = (d) => "rotate(" + d + " 44 61)";
+const ROT_R = (d) => "rotate(" + d + " 76 61)";
 
 /* ---- pattern fill inside the figure's coordinate space ---- */
 function FigPattern({ kind, accent }) {
@@ -1040,12 +1089,19 @@ const topBaby = (p) => (
 );
 const topLong = (extra) => (p) => (
   <g>
-    <Piece {...p} d={SLEEVE_L} />
-    <Piece {...p} d={SLEEVE_R} />
     <Piece {...p} d="M42,58 Q60,50 78,58 L79,112 L41,112 Z" />
     {extra ? extra(p) : null}
   </g>
 );
+
+/* Garments with sleeves. The sleeve is drawn in the arm group so it turns with
+   the limb; the body of the garment stays put. */
+const SLEEVED = {
+  longsleeve: 1, knit: 1, turtleneck: 1, oxford: 1,
+  trench: 1, overcoat: 1, duster: 1,
+  jacket: 1, denimJacket: 1, moto: 1, blazer: 1, puffer: 1,
+};
+const ARM_HELD = { tote: 1, clutch: 1, shoulderBag: 1 };
 
 const WORN = {
   tee: topShort,
@@ -1103,8 +1159,6 @@ const WORN = {
 
   trench: (p) => (
     <g>
-      <Piece {...p} d={SLEEVE_L} />
-      <Piece {...p} d={SLEEVE_R} />
       <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,100 L84,200 L36,200 L38,100 L36,72 Z" />
       {line("M52,52 L60,66 L68,52", 1.3)}
       {line("M60,66 L60,200", 1)}
@@ -1113,8 +1167,6 @@ const WORN = {
   ),
   overcoat: (p) => (
     <g>
-      <Piece {...p} d={SLEEVE_L} />
-      <Piece {...p} d={SLEEVE_R} />
       <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,100 L84,200 L36,200 L38,100 L36,72 Z" />
       {line("M52,52 L60,66 L68,52", 1.3)}
       {line("M60,66 L60,200", 1)}
@@ -1126,16 +1178,12 @@ const WORN = {
   ),
   duster: (p) => (
     <g>
-      <Piece {...p} d={SLEEVE_L} />
-      <Piece {...p} d={SLEEVE_R} />
       <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,100 L86,222 L34,222 L38,100 L36,72 Z" />
       {line("M60,60 L60,222", 1)}
     </g>
   ),
   jacket: (p) => (
     <g>
-      <Piece {...p} d={SLEEVE_L} />
-      <Piece {...p} d={SLEEVE_R} />
       <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,96 L83,134 L37,134 L38,96 L36,72 Z" />
       {line("M60,58 L60,134", 1)}
       {line("M37,126 L83,126", 1.1)}
@@ -1143,8 +1191,6 @@ const WORN = {
   ),
   denimJacket: (p) => (
     <g>
-      <Piece {...p} d={SLEEVE_L} />
-      <Piece {...p} d={SLEEVE_R} />
       <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,96 L83,134 L37,134 L38,96 L36,72 Z" />
       {line("M60,58 L60,134", 1)}
       {line("M37,126 L83,126", 1.1)}
@@ -1154,8 +1200,6 @@ const WORN = {
   ),
   moto: (p) => (
     <g>
-      <Piece {...p} d={SLEEVE_L} />
-      <Piece {...p} d={SLEEVE_R} />
       <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,96 L83,130 L37,130 L38,96 L36,72 Z" />
       {line("M54,58 L66,128", 1.4)}
       {line("M42,92 L50,98", 1.2)}
@@ -1163,8 +1207,6 @@ const WORN = {
   ),
   blazer: (p) => (
     <g>
-      <Piece {...p} d={SLEEVE_L} />
-      <Piece {...p} d={SLEEVE_R} />
       <Piece {...p} d="M40,58 Q60,49 80,58 L84,72 L82,100 L83,146 L37,146 L38,100 L36,72 Z" />
       {line("M50,52 L60,68 L54,92 Z", 1.3)}
       {line("M70,52 L60,68 L66,92 Z", 1.3)}
@@ -1175,8 +1217,6 @@ const WORN = {
   ),
   puffer: (p) => (
     <g>
-      <Piece {...p} d={SLEEVE_L} />
-      <Piece {...p} d={SLEEVE_R} />
       <Piece {...p} d="M38,58 Q60,48 82,58 L86,72 L84,96 L85,132 L35,132 L36,96 L34,72 Z" />
       {line("M60,56 L60,132", 1)}
       {line("M36,78 L84,78", 1.1)}
@@ -1208,18 +1248,22 @@ const WORN = {
   ),
   chelsea: (p) => (
     <g>
-      <Piece {...p} d="M43,192 L59,192 L60,240 Q52,246 40,244 Z" />
-      <Piece {...p} d="M61,192 L77,192 L80,244 Q68,246 60,240 Z" />
-      {line("M40,240 L80,241", 1.2)}
-      {line("M43,198 L59,198 M61,198 L77,198", 1)}
+      <Piece {...p} d="M43,192 L58,192 C58,212 58,228 59,236 Q52,245 41,243 C41,224 42,208 43,192 Z" />
+      <Piece {...p} d="M62,192 L77,192 C78,208 79,224 79,243 Q69,245 61,236 C61,228 61,212 62,192 Z" />
+      {line("M43,198 L58,198", 1)}
+      {line("M62,198 L77,198", 1)}
+      {line("M41,238 L59,236", 1.2)}
+      {line("M61,236 L79,238", 1.2)}
     </g>
   ),
   rainboot: (p) => (
     <g>
-      <Piece {...p} d="M42,176 L60,176 L60,240 Q52,246 39,244 Z" />
-      <Piece {...p} d="M60,176 L78,176 L81,244 Q68,246 60,240 Z" />
-      {line("M39,240 L81,241", 1.3)}
-      {line("M42,184 L60,184 M60,184 L78,184", 1.1)}
+      <Piece {...p} d="M43,174 L58,174 C58,196 58,218 59,236 Q52,245 41,243 C41,218 42,196 43,174 Z" />
+      <Piece {...p} d="M62,174 L77,174 C78,196 79,218 79,236 Q69,245 61,236 C61,218 61,196 62,174 Z" />
+      {line("M43,180 L58,180", 1.1)}
+      {line("M62,180 L77,180", 1.1)}
+      {line("M41,238 L59,236", 1.3)}
+      {line("M61,236 L79,238", 1.3)}
     </g>
   ),
   heel: (p) => (
@@ -1291,8 +1335,8 @@ const WORN = {
   ),
   hoops: (p) => (
     <g>
-      <circle cx="43" cy="36" r="4.6" fill="none" stroke={p.color} strokeWidth="2.4" />
-      <circle cx="77" cy="36" r="4.6" fill="none" stroke={p.color} strokeWidth="2.4" />
+      <circle cx="41" cy="40" r="2.5" fill="none" stroke={p.color} strokeWidth="1.5" />
+      <circle cx="79" cy="40" r="2.5" fill="none" stroke={p.color} strokeWidth="1.5" />
     </g>
   ),
   belt: (p) => (
@@ -1301,12 +1345,7 @@ const WORN = {
       {line("M56,98 L64,98 L64,112 L56,112 Z", 1.4)}
     </g>
   ),
-  gloves: (p) => (
-    <g>
-      <Piece {...p} d="M31,100 L41,102 L36,140 L26,138 Z" />
-      <Piece {...p} d="M89,100 L79,102 L84,140 L94,138 Z" />
-    </g>
-  ),
+  gloves: () => null,
   phone: (p) => (
     <g>
       {line("M50,60 C56,90 74,118 86,132", 1.6, 0.8)}
@@ -1357,9 +1396,9 @@ const WORN = {
 function HairBack({ style, color }) {
   const P = { fill: color, stroke: INK, strokeWidth: 1.5, strokeLinejoin: "round" };
   if (style === "long")
-    return <path {...P} d="M37,28 C37,6 83,6 83,28 C86,66 88,112 84,124 L73,120 C78,84 76,44 74,32 L46,32 C44,44 42,84 47,120 L36,124 C32,112 34,66 37,28 Z" />;
+    return <path {...P} d="M37,26 C37,2 83,2 83,26 C86,66 88,112 84,124 L73,120 C78,84 76,44 74,32 L46,32 C44,44 42,84 47,120 L36,124 C32,112 34,66 37,28 Z" />;
   if (style === "bob")
-    return <path {...P} d="M37,28 C37,6 83,6 83,28 C83,52 81,62 79,68 L71,64 C75,46 75,34 73,30 L47,30 C45,34 45,46 49,64 L41,68 C39,62 37,52 37,28 Z" />;
+    return <path {...P} d="M37,26 C37,2 83,2 83,26 C83,52 81,62 79,68 L71,64 C75,46 75,34 73,30 L47,30 C45,34 45,46 49,64 L41,68 C39,62 37,52 37,28 Z" />;
   if (style === "curls")
     return (
       <g {...P}>
@@ -1374,7 +1413,7 @@ function HairBack({ style, color }) {
     return (
       <g>
         <path {...P} d="M84,30 C96,40 98,74 90,98 L80,94 C88,72 86,44 78,34 Z" />
-        <path {...P} d="M37,28 C37,6 83,6 83,28 C83,44 82,52 80,58 L72,54 C75,42 75,34 73,30 L47,30 C45,34 45,42 48,54 L41,58 C39,52 37,44 37,28 Z" />
+        <path {...P} d="M37,26 C37,2 83,2 83,26 C83,44 82,52 80,58 L72,54 C75,42 75,34 73,30 L47,30 C45,34 45,42 48,54 L41,58 C39,52 37,44 37,28 Z" />
       </g>
     );
   if (style === "braids")
@@ -1382,7 +1421,7 @@ function HairBack({ style, color }) {
       <g>
         <path {...P} d="M36,34 C34,60 32,92 34,118 C34,126 44,126 44,118 C44,94 44,62 46,38 Z" />
         <path {...P} d="M84,34 C86,60 88,92 86,118 C86,126 76,126 76,118 C76,94 76,62 74,38 Z" />
-        <path {...P} d="M37,30 C37,8 83,8 83,30 C83,42 82,46 81,50 L73,46 C75,38 75,34 73,30 L47,30 C45,34 45,38 47,46 L39,50 C38,46 37,42 37,30 Z" />
+        <path {...P} d="M37,28 C37,4 83,4 83,28 C83,42 82,46 81,50 L73,46 C75,38 75,34 73,30 L47,30 C45,34 45,38 47,46 L39,50 C38,46 37,42 37,30 Z" />
         {[46, 62, 78, 94, 110].map((y) => (
           <g key={y}>
             <path d="M35,0 L45,0" transform={"translate(0 " + y + ")"} stroke={INK} strokeWidth="1" opacity="0.5" fill="none" />
@@ -1394,7 +1433,7 @@ function HairBack({ style, color }) {
   if (style === "scarf")
     return (
       <g>
-        <path {...P} d="M36,30 C36,6 84,6 84,30 C84,44 82,54 80,62 L74,66 L46,66 L40,62 C38,54 36,44 36,30 Z" />
+        <path {...P} d="M36,27 C36,3 84,3 84,27 C84,44 82,54 80,62 L74,66 L46,66 L40,62 C38,54 36,44 36,30 Z" />
         <path {...P} d="M40,60 C36,74 34,92 38,104 L48,98 C46,86 46,72 48,62 Z" />
       </g>
     );
@@ -1403,72 +1442,129 @@ function HairBack({ style, color }) {
       <g>
         <circle {...P} cx="36" cy="12" r="11" />
         <circle {...P} cx="84" cy="12" r="11" />
-        <path {...P} d="M38,30 C38,10 82,10 82,30 C82,42 81,48 80,52 L72,48 C75,40 75,34 73,30 L47,30 C45,34 45,40 48,48 L40,52 C39,48 38,42 38,30 Z" />
+        <path {...P} d="M38,28 C38,4 82,4 82,28 C82,42 81,48 80,52 L72,48 C75,40 75,34 73,30 L47,30 C45,34 45,40 48,48 L40,52 C39,48 38,42 38,30 Z" />
       </g>
     );
-  return <path {...P} d="M39,30 C39,10 81,10 81,30 C81,38 80,42 79,46 L73,42 C75,36 75,32 73,29 L47,29 C45,32 45,36 47,42 L41,46 C40,42 39,38 39,30 Z" />;
+  return <path {...P} d="M39,28 C39,5 81,5 81,28 C81,38 80,42 79,46 L73,42 C75,36 75,32 73,29 L47,29 C45,32 45,36 47,42 L41,46 C40,42 39,38 39,30 Z" />;
 }
 
 function HairFront({ style, color }) {
   const P = { fill: color, stroke: INK, strokeWidth: 1.4, strokeLinejoin: "round" };
-  if (style === "scarf") return null;
-  if (style === "braids") return <path {...P} d="M42,28 C44,10 76,10 78,28 C74,18 68,22 60,22 C52,22 46,20 42,28 Z" />;
-  if (style === "crop") return <path {...P} d="M42,26 C44,12 76,12 78,26 C72,18 48,18 42,26 Z" />;
-  if (style === "curls") return <path {...P} d="M44,24 C48,12 72,12 76,24 C70,16 50,16 44,24 Z" />;
-  return <path {...P} d="M42,28 C44,10 76,10 78,28 C74,18 68,22 60,22 C52,22 46,20 42,28 Z" />;
+  if (style === "scarf")
+    return (
+      <path
+        {...P}
+        d="M37,64 C35,30 38,5 60,5 C82,5 85,30 83,64 L76,60 C78,34 74,23 60,23 C46,23 42,34 44,60 Z"
+      />
+    );
+  // The crown is filled in and the hairline sits just above the brows, with the
+  // hair sweeping down past the temples so nobody looks like they're balding.
+  if (style === "crop")
+    return <path {...P} d="M40,32 C38,10 49,4 60,4 C71,4 82,10 80,32 C78,25 72,21 60,21 C48,21 42,25 40,32 Z" />;
+  if (style === "curls")
+    return <path {...P} d="M41,30 C39,12 50,5 60,5 C70,5 81,12 79,30 C76,23 70,20 60,20 C50,20 44,23 41,30 Z" />;
+  return (
+    <path
+      {...P}
+      d="M39,36 C37,10 49,3 60,3 C71,3 83,10 81,36 C79,26 76,21 68,20 C62,19 52,21 47,24 C43,26 41,30 39,36 Z"
+    />
+  );
 }
 
 /* ---- face ---- */
-function Face({ makeup, glasses, freckles }) {
-  const lip =
-    makeup === "bold" ? "#A3172E" : makeup === "glitter" ? "#C4566F" : makeup === "natural" ? "#B4636B" : "#9C6A63";
+function Face({ makeup, eyeliner, glasses, freckles }) {
+  const lips = {
+    bare: "#B08076", natural: "#B4636B", bold: "#A3172E",
+    berry: "#7E2B4A", gloss: "#D3808A", glitter: "#C4566F",
+  };
+  const lip = lips[makeup] || lips.natural;
+  const el = eyeliner || "thin";
   return (
     <g>
-      <path d="M50,29 Q53,26 56,29" fill="none" stroke={INK} strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M64,29 Q67,26 70,29" fill="none" stroke={INK} strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M49,23 Q53,21 57,23" fill="none" stroke={INK} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
-      <path d="M63,23 Q67,21 71,23" fill="none" stroke={INK} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
-      <path d="M59,36 Q60,38 61,36" fill="none" stroke={INK} strokeWidth="0.9" opacity="0.5" />
-      <path d="M55,42 Q60,45 65,42 Q60,47 55,42 Z" fill={lip} stroke={INK} strokeWidth="1" strokeLinejoin="round" />
-      {makeup === "liner" && (
-        <g stroke={INK} strokeWidth="1.5" fill="none" strokeLinecap="round">
-          <path d="M49,28 L45,25" />
-          <path d="M71,28 L75,25" />
+      {/* brows */}
+      <path d="M48,23 Q53,20.5 58,22.5" fill="none" stroke={INK} strokeWidth="1.2" opacity="0.75" strokeLinecap="round" />
+      <path d="M62,22.5 Q67,20.5 72,23" fill="none" stroke={INK} strokeWidth="1.2" opacity="0.75" strokeLinecap="round" />
+
+      {/* eyes */}
+      <ellipse cx="53" cy="30" rx="3.4" ry={el === "smoky" ? 3 : 2.8} fill="#FFFFFF" stroke="none" />
+      <ellipse cx="67" cy="30" rx="3.4" ry={el === "smoky" ? 3 : 2.8} fill="#FFFFFF" stroke="none" />
+      <circle cx="53" cy="30.4" r="1.9" fill="#3A2A20" />
+      <circle cx="67" cy="30.4" r="1.9" fill="#3A2A20" />
+      <circle cx="53.6" cy="29.6" r="0.6" fill="#FFFFFF" />
+      <circle cx="67.6" cy="29.6" r="0.6" fill="#FFFFFF" />
+
+      {/* lash line, by eyeliner style */}
+      {el !== "none" && (
+        <g fill="none" stroke={INK} strokeLinecap="round">
+          <path d="M49.6,28.6 Q53,26.4 56.4,28.6" strokeWidth={el === "smoky" ? 2.2 : el === "sharp" ? 1.6 : 1.3} />
+          <path d="M63.6,28.6 Q67,26.4 70.4,28.6" strokeWidth={el === "smoky" ? 2.2 : el === "sharp" ? 1.6 : 1.3} />
         </g>
       )}
-      {makeup === "natural" && (
-        <g fill="#C97B70" opacity="0.4">
-          <ellipse cx="47" cy="35" rx="5" ry="3" />
-          <ellipse cx="73" cy="35" rx="5" ry="3" />
+      {(el === "winged" || el === "sharp") && (
+        <g fill="none" stroke={INK} strokeWidth={el === "sharp" ? 1.6 : 1.2} strokeLinecap="round">
+          <path d={el === "sharp" ? "M49.8,28.4 L45,25.4" : "M49.9,28.5 L47,26.8"} />
+          <path d={el === "sharp" ? "M70.2,28.4 L75,25.4" : "M70.1,28.5 L73,26.8"} />
+        </g>
+      )}
+      {el === "smoky" && (
+        <g fill={INK} opacity="0.22">
+          <ellipse cx="53" cy="28.6" rx="5.4" ry="3.2" />
+          <ellipse cx="67" cy="28.6" rx="5.4" ry="3.2" />
+        </g>
+      )}
+      {el === "graphic" && (
+        <g fill="none" stroke={INK} strokeWidth="1.2" strokeLinecap="round">
+          <path d="M48.6,26.4 Q53,24 57.4,26.4" />
+          <path d="M62.6,26.4 Q67,24 71.4,26.4" />
+          <path d="M49.9,28.5 L46.4,26.2" />
+          <path d="M70.1,28.5 L73.6,26.2" />
+        </g>
+      )}
+
+      {/* nose and mouth */}
+      <path d="M59,36 Q60.4,38.4 61.4,36.6" fill="none" stroke={INK} strokeWidth="0.9" opacity="0.5" strokeLinecap="round" />
+      <path d="M55,42 Q57.5,40.4 60,41.4 Q62.5,40.4 65,42 Q62,45.6 60,45.6 Q58,45.6 55,42 Z" fill={lip} stroke={INK} strokeWidth="0.9" strokeLinejoin="round" />
+      {makeup === "gloss" && <ellipse cx="60" cy="42.6" rx="1.9" ry="0.7" fill="#FFFFFF" opacity="0.55" />}
+
+      {(makeup === "natural" || makeup === "gloss") && (
+        <g fill="#C97B70" opacity="0.32">
+          <ellipse cx="48" cy="36" rx="4.4" ry="2.6" />
+          <ellipse cx="72" cy="36" rx="4.4" ry="2.6" />
+        </g>
+      )}
+      {makeup === "bold" && (
+        <g fill="#A3172E" opacity="0.18">
+          <ellipse cx="48" cy="35.4" rx="4.4" ry="2.6" />
+          <ellipse cx="72" cy="35.4" rx="4.4" ry="2.6" />
+        </g>
+      )}
+      {makeup === "berry" && (
+        <g fill="#7E2B4A" opacity="0.16">
+          <ellipse cx="48" cy="35.4" rx="4.4" ry="2.6" />
+          <ellipse cx="72" cy="35.4" rx="4.4" ry="2.6" />
         </g>
       )}
       {makeup === "glitter" && (
         <g fill="#D9B44A">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <circle key={i} cx={i < 3 ? 44 + i * 4 : 66 + (i - 3) * 4} cy={i % 2 ? 32 : 35} r="1.3" />
+          {[[46,33],[49,36],[45,37],[71,33],[74,36],[70,37]].map((p, i) => (
+            <circle key={i} cx={p[0]} cy={p[1]} r="1.1" />
           ))}
         </g>
       )}
       {freckles && (
-        <g fill={INK} opacity="0.35">
-          {[[45, 34], [49, 37], [44, 39], [71, 34], [75, 37], [70, 39], [57, 36], [63, 37]].map((p, i) => (
-            <circle key={i} cx={p[0]} cy={p[1]} r="0.9" />
+        <g fill={INK} opacity="0.3">
+          {[[47,35],[50,38],[46,39],[52,36],[70,35],[73,38],[74,35],[68,38],[57,37],[63,38]].map((p, i) => (
+            <circle key={i} cx={p[0]} cy={p[1]} r="0.75" />
           ))}
         </g>
       )}
       {glasses && (
-        <g fill="none" stroke={INK} strokeWidth="1.5">
-          <rect x="43" y="24" width="15" height="12" rx="3" />
-          <rect x="62" y="24" width="15" height="12" rx="3" />
-          <path d="M58,29 L62,29" />
-          <path d="M43,28 L38,27" />
-          <path d="M77,28 L82,27" />
-        </g>
-      )}
-      {makeup === "bold" && (
-        <g fill="#A3172E" opacity="0.25">
-          <ellipse cx="47" cy="34" rx="5" ry="3" />
-          <ellipse cx="73" cy="34" rx="5" ry="3" />
+        <g fill="none" stroke={INK} strokeWidth="1.4">
+          <rect x="46" y="25" width="14" height="11" rx="3.5" />
+          <rect x="60" y="25" width="14" height="11" rx="3.5" />
+          <path d="M60,29 L60,29" />
+          <path d="M46,29 L41,28" />
+          <path d="M74,29 L79,28" />
         </g>
       )}
     </g>
@@ -1481,51 +1577,94 @@ function Model({ model, items, colors, style, className }) {
   const skin = skinOf(m);
   const it = items || {};
   const cols = colors || {};
+  const pose = poseOf(m);
   const B = { fill: skin, stroke: INK, strokeWidth: 1.5, strokeLinejoin: "round" };
+  const shade = { fill: "none", stroke: INK, strokeWidth: 0.8, opacity: 0.28, strokeLinecap: "round" };
 
-  const piece = (slot) => {
+  const props = (slot) => {
     const item = it[slot] ? BY_ID[it[slot]] : null;
     if (!item) return null;
-    const render = WORN[item.shape];
-    if (!render) return null;
-    return render({
-      color: cols[slot] || item.color,
-      accent: item.accent || GRAPHITE,
-      pattern: item.pattern,
-    });
+    return {
+      item: item,
+      p: { color: cols[slot] || item.color, accent: item.accent || GRAPHITE, pattern: item.pattern },
+    };
+  };
+  const piece = (slot) => {
+    const x = props(slot);
+    if (!x) return null;
+    const render = WORN[x.item.shape];
+    return render ? render(x.p) : null;
   };
 
+  const top = props("top");
+  const outer = props("outerwear");
+  const acc = props("accessory");
+  const bag = props("bag");
   const headAcc = ["hat", "headband", "clip", "sunglasses", "hoops"];
-  const accItem = it.accessory ? BY_ID[it.accessory] : null;
-  const accOnHead = accItem && headAcc.indexOf(accItem.shape) > -1;
+  const accOnHead = acc && headAcc.indexOf(acc.item.shape) > -1;
+  const gloved = acc && acc.item.shape === "gloves";
+  const watched = acc && acc.item.shape === "watch";
+  const heldBag = bag && ARM_HELD[bag.item.shape];
+
+  const sleeve = (x, d) => (x && SLEEVED[x.item.shape] ? <Piece {...x.p} d={d} /> : null);
 
   return (
-    <svg viewBox="0 0 120 260" className={className} style={style} aria-hidden="true">
-      <g transform={poseOf(m)}>
-        <g transform={"translate(0 260) scale(1 " + heightOf(m) + ") translate(0 -260)"}>
-          <HairBack style={m.hair} color={m.hairColor} />
+    <svg viewBox="0 -20 120 282" className={className} style={style} aria-hidden="true">
+      <g transform={"translate(60 0) scale(" + pose.sx + " 1) translate(-60 0)"}>
+        <g transform={"rotate(" + pose.tilt + " 60 240)"}>
+          <g transform={"translate(0 252) scale(1 " + heightOf(m) + ") translate(0 -252)"}>
+            <HairBack style={m.hair} color={m.hairColor} />
 
-          <path {...B} d="M43,58 C37,64 33,90 30,134 L40,136 C43,96 46,72 50,62 Z" />
-          <path {...B} d="M77,58 C83,64 87,90 90,134 L80,136 C77,96 74,72 70,62 Z" />
-          <circle {...B} cx="35" cy="139" r="5" />
-          <circle {...B} cx="85" cy="139" r="5" />
-          <path {...B} d="M43,136 C41,168 42,202 44,234 L58,234 C58,202 59,168 59,136 Z" />
-          <path {...B} d="M61,136 C61,168 62,202 62,234 L76,234 C78,202 79,168 77,136 Z" />
-          <path {...B} d="M44,102 L76,102 C79,116 78,130 77,140 L43,140 C42,130 41,116 44,102 Z" />
-          <path {...B} d="M42,58 Q60,50 78,58 C80,76 77,92 76,104 L44,104 C43,92 40,76 42,58 Z" />
-          <path {...B} d="M54,46 L66,46 L66,59 L54,59 Z" />
-          <path {...B} d="M60,8 C72,8 79,18 79,30 C79,44 71,53 60,53 C49,53 41,44 41,30 C41,18 48,8 60,8 Z" />
-          <Face makeup={m.makeup} glasses={m.glasses} freckles={m.freckles} />
-          <HairFront style={m.hair} color={m.hairColor} />
+            {/* arms, behind the clothes */}
+            <g transform={ROT_L(pose.aL)}>
+              <path {...B} d="M44,60 C38,66 34,90 31,132 C30,137 33,141 36,141 C39,141 41,138 41,134 C43,98 46,74 50,63 Z" />
+              <circle {...B} cx="35" cy="142" r="4.6" />
+            </g>
+            <g transform={ROT_R(pose.aR)}>
+              <path {...B} d="M76,60 C82,66 86,90 89,132 C90,137 87,141 84,141 C81,141 79,138 79,134 C77,98 74,74 70,63 Z" />
+              <circle {...B} cx="85" cy="142" r="4.6" />
+            </g>
 
-          {piece("bottom")}
-          {piece("shoes")}
-          {piece("top")}
-          {piece("outerwear")}
-          {!accOnHead && piece("accessory")}
-          {piece("bag")}
-          {accOnHead && piece("accessory")}
-          {piece("pet")}
+            {/* legs, hips, torso */}
+            <path {...B} d="M44,136 C42,162 42,190 44,214 C45,224 45,230 45,234 L58,234 C58,228 58,222 58,214 C59,190 59,162 59,136 Z" />
+            <path {...B} d="M61,136 C61,162 61,190 62,214 C62,222 62,228 62,234 L75,234 C75,230 75,224 76,214 C78,190 78,162 76,136 Z" />
+            <path {...B} d="M44,100 L76,100 C79,114 78,128 77,140 L43,140 C42,128 41,114 44,100 Z" />
+            <path {...B} d="M43,59 Q60,50 77,59 C79,72 76,86 74,96 C73,101 72,104 72,106 L48,106 C48,104 47,101 46,96 C44,86 41,72 43,59 Z" />
+            <path {...shade} d="M50,86 C56,90 64,90 70,86" />
+            <path {...B} d="M55,45 L65,45 C65,52 66,56 68,59 L52,59 C54,56 55,52 55,45 Z" />
+
+            {/* head */}
+            <path {...B} d="M60,7 C71,7 78,16 78,29 C78,38 74,45 68,49 C65,51 62,52 60,52 C58,52 55,51 52,49 C46,45 42,38 42,29 C42,16 49,7 60,7 Z" />
+            <path {...shade} d="M45,31 C43,31 42,33 43,35 C43,37 45,38 46,37" />
+            <path {...shade} d="M75,31 C77,31 78,33 77,35 C77,37 75,38 74,37" />
+            <Face makeup={m.makeup} eyeliner={m.eyeliner} glasses={m.glasses} freckles={m.freckles} />
+            <HairFront style={m.hair} color={m.hairColor} />
+
+            {/* clothes */}
+            {piece("bottom")}
+            {piece("shoes")}
+            {piece("top")}
+            {piece("outerwear")}
+            {!accOnHead && !gloved && !watched && piece("accessory")}
+            {!heldBag && piece("bag")}
+
+            {/* sleeves and anything carried, turning with the arms */}
+            <g transform={ROT_L(pose.aL)}>
+              {sleeve(top, SLEEVE_L)}
+              {sleeve(outer, SLEEVE_L)}
+              {gloved && <Piece {...acc.p} d="M31,102 L41,104 L37,141 L27,139 Z" />}
+            </g>
+            <g transform={ROT_R(pose.aR)}>
+              {sleeve(top, SLEEVE_R)}
+              {sleeve(outer, SLEEVE_R)}
+              {gloved && <Piece {...acc.p} d="M89,102 L79,104 L83,141 L93,139 Z" />}
+              {watched && <Piece {...acc.p} d="M80,128 L89,129 L87,140 L78,139 Z" sw={1.3} />}
+              {heldBag && WORN[bag.item.shape](bag.p)}
+            </g>
+
+            {accOnHead && piece("accessory")}
+            {piece("pet")}
+          </g>
         </g>
       </g>
     </svg>
@@ -2265,9 +2404,14 @@ function ModelEditor({ model, onChange }) {
           <Swatch key={c} color={c} on={m.hairColor === c} onClick={() => set("hairColor", c)} />
         ))}
       </Row>
-      <Row label="Makeup">
+      <Row label="Lips and cheeks">
         {MAKEUPS.map((k) => (
           <Chip key={k.id} on={m.makeup === k.id} onClick={() => set("makeup", k.id)}>{k.name}</Chip>
+        ))}
+      </Row>
+      <Row label="Eyeliner">
+        {EYELINERS.map((k) => (
+          <Chip key={k.id} on={(m.eyeliner || "thin") === k.id} onClick={() => set("eyeliner", k.id)}>{k.name}</Chip>
         ))}
       </Row>
       <Row label="Height">
