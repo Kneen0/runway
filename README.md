@@ -262,8 +262,11 @@ thing to replace is the single-blob store, not the app.
   arrive mid-season, add its id to `DROPS` with a round number.
 - Award kinds live in `AWARDS` (change the vote budgets there), emoji in `REACTIONS`, and
   points in `POINTS` / `POINTS_AWARD`.
-- The model is drawn in a 120 x 260 SVG space: shoulders at y58, waist y104, hips y138,
-  knees y186, ankles y228. Worn garments are authored against those landmarks. Layer order
+- The model is drawn in a 120 x 288 SVG space: shoulders at y58, waist y104, hips y138,
+  knees y186, ankles y228. The head is drawn at full size then scaled to 0.88 about the neck,
+  and the legs are stretched 1.08 about the hip — fashion-plate proportions without having to
+  redraw every garment. `Piece` gives each shape a soft light-to-shadow gradient, and outlines
+  use `ART` (charcoal) rather than the UI's true black. Worn garments are authored against those landmarks. Layer order
   is bottom, shoes, top, outerwear, accessory, bag, then sleeves, head accessories and pet —
   which is why boots sit over trousers. Sleeves live in `SLEEVED` and are drawn last, inside
   the rotating arm group.
